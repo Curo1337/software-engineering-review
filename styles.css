@@ -1261,12 +1261,45 @@ body.has-custom-bg .music-player {
   margin-bottom: 4px;
 }
 
+.music-player-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .music-player-title {
+  flex: 1;
+  min-width: 0;
   font-size: 0.92rem;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.music-player-state {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.music-player-state.is-playing {
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--success);
+}
+
+.music-player-state.is-paused {
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--warn);
+}
+
+.music-player-cover {
+  cursor: pointer;
 }
 
 .music-player-artist {
@@ -1314,6 +1347,78 @@ body.has-custom-bg .music-player {
   width: 40px;
   height: 40px;
   font-size: 1rem;
+}
+
+.music-ctrl-pause {
+  background: rgba(217, 119, 6, 0.08);
+  border-color: rgba(217, 119, 6, 0.35);
+}
+
+.music-ctrl-pause:hover {
+  background: rgba(217, 119, 6, 0.16);
+  border-color: var(--warn);
+}
+
+.music-login-card {
+  padding: 4px 0;
+}
+
+.music-login-status {
+  margin-bottom: 14px;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.music-qr-wrap {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.music-qr-img {
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  display: block;
+  margin: 0 auto;
+}
+
+.music-qr-img[hidden] {
+  display: none !important;
+}
+
+.music-qr-placeholder {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  padding: 16px;
+}
+
+.music-qr-tip {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.music-qr-link-wrap {
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+
+.music-qr-link-wrap a {
+  color: var(--accent);
+}
+
+.music-login-actions {
+  margin-bottom: 10px;
 }
 
 .music-volume {

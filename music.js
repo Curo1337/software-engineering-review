@@ -6,7 +6,9 @@
   const defaults = {
     apiBase: DEFAULT_API,
     volume: 0.75,
-    playlistId: DEFAULT_PLAYLIST_ID
+    playlistId: DEFAULT_PLAYLIST_ID,
+    neteaseCookie: '',
+    loginNickname: ''
   };
 
   let settings = { ...defaults };
@@ -14,6 +16,9 @@
   let queueIndex = -1;
   let isPlaying = false;
   let isSeeking = false;
+  let hasLoadedTrack = false;
+  let qrPollTimer = null;
+  let qrUnikey = '';
   const audio = new Audio();
 
   function $(id) { return document.getElementById(id); }
@@ -33,6 +38,10 @@
     return (settings.apiBase || DEFAULT_API).replace(/\/+$/, '');
   }
 
+  function hasLogin() {
+    return !!settings.neteaseCookie;
+  }
+
   function formatArtists(song) {
     const list = song.ar || song.artists || [];
     return list.map(a => a.name).join(' / ') || '未知歌手';
@@ -50,10 +59,20 @@
     el.classList.toggle('music-status-error', !!isError);
   }
 
-  async function neteaseApi(path, params = {}) {
+  function buildApiParams(params = {}) {
+    const merged = { ...params, timestamp: Date.now() };
+    if (settings.neteaseCookie) {
+      merged.cookie = settings.neteaseCookie;
+    }
+    return merged;
+  }
+
+  async function neteaseApi(path, params = {}, options = {}) {
     const url = new URL(getApiBase() + path);
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));
+    Object.entries(buildApiParams(params)).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') {
+        url.searchParams.set(k, String(v));
+      }
     });
 
     let res;
@@ -66,7 +85,8 @@
     if (!res.ok) throw new Error(`API 请求失败 (${res.status})`);
 
     const data = await res.json();
-    if (data.code !== undefined && data.code !== 200) {
+    const allowedCodes = options.allowedCodes || [200];
+    if (data.code !== undefined && !allowedCodes.includes(data.code)) {
       throw new Error(data.msg || data.message || `API 返回错误 (${data.code})`);
     }
     return data;
@@ -95,10 +115,231 @@
   }
 
   async function getSongUrl(id) {
-    const data = await neteaseApi('/song/url/v1', { id, level: 'standard' });
-    const item = data.data?.[0];
-    if (!item?.url) throw new Error('该歌曲暂无法播放（可能是 VIP 或版权限制）');
-    return item.url;
+    const levels = hasLogin() ? ['exhigh', 'higher', 'standard'] : ['standard', 'higher'];
+    let lastError = null;
+
+    for (const level of levels) {
+      try {
+        const data = await neteaseApi('/song/url/v1', { id, level });
+        const item = data.data?.[0];
+        if (item?.url) return item.url;
+        lastError = new Error('该歌曲暂无法播放（可能是 VIP 或版权限制）');
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (hasLogin()) {
+      throw lastError || new Error('该歌曲暂无法播放，请确认账号有相应 VIP 权限');
+    }
+    throw new Error('该歌曲无法播放，请登录网易云账号后再试（VIP 歌曲需要登录）');
+  }
+
+  function showQrImage(src) {
+    const qrImage = $('musicQrImage');
+    const qrPlaceholder = $('musicQrPlaceholder');
+    if (!qrImage) return;
+    qrImage.src = src;
+    qrImage.hidden = false;
+    if (qrPlaceholder) qrPlaceholder.hidden = true;
+  }
+
+  function hideQrImage(message) {
+    const qrImage = $('musicQrImage');
+    const qrPlaceholder = $('musicQrPlaceholder');
+    if (qrImage) {
+      qrImage.hidden = true;
+      qrImage.removeAttribute('src');
+    }
+    if (qrPlaceholder) {
+      qrPlaceholder.hidden = false;
+      qrPlaceholder.textContent = message || '二维码加载失败';
+    }
+  }
+
+  function setQrLink(url) {
+    const wrap = $('musicQrLinkWrap');
+    const link = $('musicQrLink');
+    if (!url || !wrap || !link) return;
+    link.href = url;
+    wrap.hidden = false;
+  }
+
+  function clearQrLink() {
+    const wrap = $('musicQrLinkWrap');
+    if (wrap) wrap.hidden = true;
+  }
+
+  function buildQrImageSrc(qrimg, qrurl) {
+    if (qrimg) {
+      if (qrimg.startsWith('data:') || qrimg.startsWith('http')) return qrimg;
+      return `data:image/png;base64,${qrimg}`;
+    }
+    if (qrurl) {
+      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(qrurl)}`;
+    }
+    return '';
+  }
+
+  function updateLoginUI(profile) {
+    const status = $('musicLoginStatus');
+    const logoutBtn = $('musicLogout');
+    const qrStart = $('musicQrStart');
+    const qrWrap = $('musicQrWrap');
+
+    if (profile?.nickname || settings.loginNickname) {
+      const name = profile?.nickname || settings.loginNickname;
+      const vipTag = profile?.vipType > 0 ? ' · VIP' : '';
+      if (status) status.textContent = `已登录：${name}${vipTag}`;
+      if (logoutBtn) logoutBtn.hidden = false;
+      if (qrStart) qrStart.textContent = '刷新登录状态';
+      if (qrWrap) qrWrap.hidden = true;
+      stopQrPolling();
+    } else {
+      if (status) status.textContent = '未登录 · VIP 歌曲需扫码登录后播放';
+      if (logoutBtn) logoutBtn.hidden = true;
+      if (qrStart) qrStart.textContent = '刷新二维码';
+      if (qrWrap) qrWrap.hidden = false;
+    }
+  }
+
+  async function refreshLoginStatus() {
+    if (!settings.neteaseCookie) {
+      settings.loginNickname = '';
+      updateLoginUI(null);
+      return false;
+    }
+
+    try {
+      const data = await neteaseApi('/login/status');
+      const profile = data.profile || data.data?.profile;
+      if (data.data?.code === 200 || profile) {
+        settings.loginNickname = profile?.nickname || settings.loginNickname;
+        saveSettings();
+        updateLoginUI(profile);
+        return true;
+      }
+    } catch (_) { /* ignore */ }
+
+    settings.neteaseCookie = '';
+    settings.loginNickname = '';
+    saveSettings();
+    updateLoginUI(null);
+    return false;
+  }
+
+  function stopQrPolling() {
+    if (qrPollTimer) {
+      clearInterval(qrPollTimer);
+      qrPollTimer = null;
+    }
+  }
+
+  function setQrTip(text) {
+    const tip = $('musicQrTip');
+    if (tip) tip.innerHTML = text;
+  }
+
+  async function startQrLogin() {
+    if (hasLogin()) {
+      await refreshLoginStatus();
+      return;
+    }
+
+    stopQrPolling();
+    clearQrLink();
+    hideQrImage('正在获取二维码…');
+    setQrTip('正在连接 API 并生成二维码…');
+    setStatus('正在生成登录二维码…');
+
+    const qrStart = $('musicQrStart');
+    if (qrStart) {
+      qrStart.disabled = true;
+      qrStart.textContent = '加载中…';
+    }
+
+    try {
+      const keyData = await neteaseApi('/login/qr/key');
+      qrUnikey = keyData.data?.unikey || keyData.unikey;
+      if (!qrUnikey) throw new Error('无法获取二维码 key');
+
+      const qrData = await neteaseApi('/login/qr/create', { key: qrUnikey, qrimg: 1 });
+      const qrimg = qrData.data?.qrimg || qrData.qrimg;
+      const qrurl = qrData.data?.qrurl || qrData.qrurl;
+      const imageSrc = buildQrImageSrc(qrimg, qrurl);
+
+      if (!imageSrc) throw new Error('API 未返回二维码，请确认 NeteaseCloudMusicApi 已启动');
+
+      showQrImage(imageSrc);
+      if (qrurl) setQrLink(qrurl);
+
+      setQrTip('请打开 <strong>网易云音乐 App</strong> → 左上角菜单 → 扫一扫');
+      setStatus('二维码已就绪，请扫码登录');
+
+      qrPollTimer = setInterval(async () => {
+        try {
+          const check = await neteaseApi('/login/qr/check', { key: qrUnikey, noCookie: true }, {
+            allowedCodes: [800, 801, 802, 803]
+          });
+
+          if (check.code === 801) {
+            setQrTip('二维码已显示，请用 App 扫一扫');
+          } else if (check.code === 802) {
+            setQrTip('扫码成功！请在手机上点击 <strong>确认登录</strong>');
+          } else if (check.code === 803) {
+            stopQrPolling();
+            settings.neteaseCookie = check.cookie || check.data?.cookie || '';
+            if (!settings.neteaseCookie) throw new Error('登录成功但未获取到凭证，请重试');
+            saveSettings();
+            await refreshLoginStatus();
+            setStatus('网易云登录成功 ✓');
+            setQrTip('登录成功，现在可以播放 VIP 歌曲了');
+          } else if (check.code === 800) {
+            stopQrPolling();
+            hideQrImage('二维码已过期');
+            setQrTip('二维码已过期，请点击「刷新二维码」');
+            setStatus('二维码已过期，请刷新', true);
+          }
+        } catch (err) {
+          stopQrPolling();
+          hideQrImage('扫码检测失败');
+          setStatus(err.message, true);
+        }
+      }, 2000);
+    } catch (err) {
+      hideQrImage('获取二维码失败');
+      setQrTip('请先在「设置」中配置 API 地址，并双击 <code>start-music-api.bat</code> 启动服务');
+      setStatus(err.message, true);
+    } finally {
+      if (qrStart) {
+        qrStart.disabled = false;
+        qrStart.textContent = hasLogin() ? '刷新登录状态' : '刷新二维码';
+      }
+    }
+  }
+
+  async function logoutNetease() {
+    stopQrPolling();
+    try {
+      if (settings.neteaseCookie) {
+        await neteaseApi('/logout');
+      }
+    } catch (_) { /* ignore */ }
+
+    settings.neteaseCookie = '';
+    settings.loginNickname = '';
+    saveSettings();
+    updateLoginUI(null);
+    setStatus('已退出网易云登录');
+
+    const qrImage = $('musicQrImage');
+    const qrPlaceholder = $('musicQrPlaceholder');
+    if (qrImage) {
+      qrImage.hidden = true;
+      qrImage.removeAttribute('src');
+    }
+    if (qrPlaceholder) qrPlaceholder.hidden = false;
+    setQrTip('请使用 <strong>网易云音乐 App</strong> 扫码登录');
   }
 
   function renderSearchResults(songs) {
@@ -136,25 +377,56 @@
     return div.innerHTML;
   }
 
+  function setPlayerVisible(show) {
+    $('musicPlayer')?.classList.toggle('active', show);
+  }
+
+  function updatePlayStateLabel() {
+    const state = $('musicPlayState');
+    if (!state) return;
+    if (!hasLoadedTrack) {
+      state.textContent = '待机';
+      state.className = 'music-player-state';
+    } else if (isPlaying) {
+      state.textContent = '播放中';
+      state.className = 'music-player-state is-playing';
+    } else {
+      state.textContent = '已暂停';
+      state.className = 'music-player-state is-paused';
+    }
+  }
+
+  function updatePlayButtons() {
+    const playBtn = $('musicPlayBtn');
+    const pauseBtn = $('musicPauseBtn');
+    const canControl = hasLoadedTrack && !!audio.src;
+
+    if (playBtn) playBtn.hidden = isPlaying && canControl;
+    if (pauseBtn) pauseBtn.hidden = !isPlaying || !canControl;
+  }
+
   function updatePlayerUI(song) {
     const title = $('musicTitle');
     const artist = $('musicArtist');
     const cover = $('musicCover');
     const fallback = $('musicCoverFallback');
-    const player = $('musicPlayer');
 
     if (!song) {
       if (title) title.textContent = '未播放';
       if (artist) artist.textContent = '打开音乐面板搜索或加载歌单';
       if (cover) { cover.hidden = true; cover.removeAttribute('src'); }
       if (fallback) fallback.hidden = false;
-      player?.classList.remove('active');
+      hasLoadedTrack = false;
+      setPlayerVisible(false);
+      updatePlayStateLabel();
+      updatePlayButtons();
       return;
     }
 
     if (title) title.textContent = song.name;
     if (artist) artist.textContent = formatArtists(song);
-    player?.classList.add('active');
+    hasLoadedTrack = true;
+    setPlayerVisible(true);
 
     const pic = getCoverUrl(song);
     if (cover && fallback) {
@@ -167,22 +439,14 @@
         fallback.hidden = false;
       }
     }
-  }
 
-  function updatePlayButton() {
-    const btn = $('musicPlayPause');
-    if (btn) btn.textContent = isPlaying ? '⏸' : '▶';
+    updatePlayStateLabel();
+    updatePlayButtons();
   }
 
   async function playFromQueue(newQueue, index, replace) {
-    if (replace) {
-      queue = newQueue.slice();
-      queueIndex = index;
-    } else {
-      queue = newQueue.slice();
-      queueIndex = index;
-    }
-
+    queue = newQueue.slice();
+    queueIndex = index;
     await playCurrent();
   }
 
@@ -199,12 +463,17 @@
       audio.volume = settings.volume;
       await audio.play();
       isPlaying = true;
-      updatePlayButton();
-      setStatus(`正在播放：${song.name}`);
+      updatePlayButtons();
+      updatePlayStateLabel();
+      setStatus(`正在播放：${song.name}${hasLogin() ? '' : '（未登录，VIP 歌曲可能无法播放）'}`);
     } catch (err) {
       isPlaying = false;
-      updatePlayButton();
+      updatePlayButtons();
+      updatePlayStateLabel();
       setStatus(err.message, true);
+      if (!hasLogin() && /登录|VIP/i.test(err.message)) {
+        setTimeout(() => openMusicPanel('account'), 500);
+      }
     }
   }
 
@@ -224,27 +493,45 @@
     playCurrent();
   }
 
-  function togglePlayPause() {
+  function pauseMusic() {
+    if (!audio.src) return;
+    audio.pause();
+    isPlaying = false;
+    updatePlayButtons();
+    updatePlayStateLabel();
+    const song = queue[queueIndex];
+    setStatus(song ? `已暂停：${song.name}` : '已暂停');
+  }
+
+  function resumeMusic() {
     if (!audio.src) {
       openMusicPanel('search');
       return;
     }
-    if (isPlaying) {
-      audio.pause();
-      isPlaying = false;
-    } else {
-      audio.play().then(() => {
-        isPlaying = true;
-        updatePlayButton();
-      }).catch(err => setStatus(err.message, true));
-    }
-    updatePlayButton();
+    audio.play().then(() => {
+      isPlaying = true;
+      updatePlayButtons();
+      updatePlayStateLabel();
+      const song = queue[queueIndex];
+      setStatus(song ? `正在播放：${song.name}` : '正在播放');
+    }).catch(err => setStatus(err.message, true));
+  }
+
+  function togglePlayPause() {
+    if (isPlaying) pauseMusic();
+    else resumeMusic();
+  }
+
+  function isTypingTarget(target) {
+    if (!target) return false;
+    const tag = target.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
   }
 
   function openMusicPanel(tab) {
     $('musicPanel')?.classList.add('show');
-    if (tab) switchTab(tab);
     syncPanelSettings();
+    if (tab) switchTab(tab);
   }
 
   function closeMusicPanel() {
@@ -258,6 +545,11 @@
     document.querySelectorAll('.music-tab-panel').forEach(panel => {
       panel.classList.toggle('active', panel.dataset.panel === tabName);
     });
+    if (tabName === 'account') {
+      refreshLoginStatus().then(loggedIn => {
+        if (!loggedIn) startQrLogin();
+      });
+    }
   }
 
   function syncPanelSettings() {
@@ -331,9 +623,22 @@
     $('musicApiSave')?.addEventListener('click', handleSaveApi);
     $('musicApiTest')?.addEventListener('click', testApiConnection);
 
-    $('musicPlayPause')?.addEventListener('click', togglePlayPause);
+    $('musicPlayBtn')?.addEventListener('click', resumeMusic);
+    $('musicPauseBtn')?.addEventListener('click', pauseMusic);
     $('musicNext')?.addEventListener('click', playNext);
     $('musicPrev')?.addEventListener('click', playPrev);
+
+    $('musicQrStart')?.addEventListener('click', startQrLogin);
+    $('musicLogout')?.addEventListener('click', logoutNetease);
+
+    $('musicTitle')?.addEventListener('click', togglePlayPause);
+    document.querySelector('.music-player-cover')?.addEventListener('click', togglePlayPause);
+
+    document.addEventListener('keydown', e => {
+      if (e.code !== 'Space' || isTypingTarget(e.target)) return;
+      e.preventDefault();
+      togglePlayPause();
+    });
 
     const progress = $('musicProgress');
     progress?.addEventListener('input', () => { isSeeking = true; });
@@ -367,12 +672,14 @@
 
     audio.addEventListener('play', () => {
       isPlaying = true;
-      updatePlayButton();
+      updatePlayButtons();
+      updatePlayStateLabel();
     });
 
     audio.addEventListener('pause', () => {
       isPlaying = false;
-      updatePlayButton();
+      updatePlayButtons();
+      updatePlayStateLabel();
     });
 
     audio.addEventListener('ended', playNext);
@@ -383,7 +690,7 @@
     });
   }
 
-  function init() {
+  async function init() {
     loadSettings();
     audio.volume = settings.volume;
 
@@ -394,7 +701,11 @@
 
     bindEvents();
     syncPanelSettings();
-    testApiConnection();
+    updateLoginUI(settings.loginNickname ? { nickname: settings.loginNickname } : null);
+    await refreshLoginStatus();
+    await testApiConnection();
+    updatePlayButtons();
+    updatePlayStateLabel();
   }
 
   if (document.readyState === 'loading') {
