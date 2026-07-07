@@ -182,7 +182,11 @@
         </div>
         <div class="music-player-artist" id="musicArtist">打开音乐面板搜索或加载歌单</div>
       </div>
-      <input type="range" class="music-progress" id="musicProgress" min="0" max="100" value="0" aria-label="播放进度">
+      <div class="music-progress-wrap">
+        <span class="music-time-current" id="musicTimeCurrent">00:00</span>
+        <input type="range" class="music-progress" id="musicProgress" min="0" max="100" value="0" aria-label="播放进度">
+        <span class="music-time-total" id="musicTimeTotal">00:00</span>
+      </div>
     </div>
     <div class="music-player-controls">
       <button type="button" class="music-ctrl-btn" id="musicPrev" title="上一首">⏮</button>

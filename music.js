@@ -452,6 +452,35 @@
     return div.innerHTML;
   }
 
+  function formatTime(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  function updateProgressDisplay() {
+    const currentEl = $('musicTimeCurrent');
+    const totalEl = $('musicTimeTotal');
+    const progress = $('musicProgress');
+
+    if (currentEl) currentEl.textContent = formatTime(audio.currentTime);
+    if (totalEl) totalEl.textContent = formatTime(audio.duration);
+
+    if (progress && !isSeeking && Number.isFinite(audio.duration) && audio.duration > 0) {
+      progress.value = String((audio.currentTime / audio.duration) * 100);
+    }
+  }
+
+  function resetProgressDisplay() {
+    const currentEl = $('musicTimeCurrent');
+    const totalEl = $('musicTimeTotal');
+    const progress = $('musicProgress');
+    if (currentEl) currentEl.textContent = '00:00';
+    if (totalEl) totalEl.textContent = '00:00';
+    if (progress) progress.value = '0';
+  }
+
   function setPlayerVisible(show) {
     $('musicPlayer')?.classList.toggle('active', show);
   }
@@ -512,6 +541,7 @@
       if (fallback) fallback.hidden = false;
       hasLoadedTrack = false;
       setPlayerVisible(false);
+      resetProgressDisplay();
       syncPlayerControls();
       return;
     }
@@ -728,12 +758,20 @@
     });
 
     const progress = $('musicProgress');
-    progress?.addEventListener('input', () => { isSeeking = true; });
+    progress?.addEventListener('input', () => {
+      isSeeking = true;
+      if (audio.duration) {
+        const preview = (Number(progress.value) / 100) * audio.duration;
+        const currentEl = $('musicTimeCurrent');
+        if (currentEl) currentEl.textContent = formatTime(preview);
+      }
+    });
     progress?.addEventListener('change', () => {
       if (audio.duration) {
         audio.currentTime = (progress.value / 100) * audio.duration;
       }
       isSeeking = false;
+      updateProgressDisplay();
     });
 
     const volume = $('musicVolume');
@@ -752,10 +790,9 @@
       if (volume) volume.value = e.target.value;
     });
 
-    audio.addEventListener('timeupdate', () => {
-      if (!progress || isSeeking || !audio.duration) return;
-      progress.value = String((audio.currentTime / audio.duration) * 100);
-    });
+    audio.addEventListener('timeupdate', updateProgressDisplay);
+    audio.addEventListener('loadedmetadata', updateProgressDisplay);
+    audio.addEventListener('durationchange', updateProgressDisplay);
 
     audio.addEventListener('play', syncPlayerControls);
     audio.addEventListener('pause', syncPlayerControls);
@@ -782,6 +819,7 @@
     await refreshLoginStatus();
     await testApiConnection();
     syncPlayerControls();
+    resetProgressDisplay();
   }
 
   if (document.readyState === 'loading') {

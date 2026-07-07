@@ -1314,8 +1314,33 @@ body.has-custom-bg .music-player {
   text-overflow: ellipsis;
 }
 
+.music-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.music-time-current,
+.music-time-total {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  min-width: 38px;
+}
+
+.music-time-current {
+  text-align: right;
+}
+
+.music-time-total {
+  text-align: left;
+}
+
 .music-progress {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 4px;
   accent-color: var(--accent);
   cursor: pointer;
@@ -1560,6 +1585,12 @@ body.has-custom-bg .music-player {
 
   .music-volume {
     display: none;
+  }
+
+  .music-time-current,
+  .music-time-total {
+    font-size: 0.68rem;
+    min-width: 34px;
   }
 
   .menu-toggle { display: block; }
