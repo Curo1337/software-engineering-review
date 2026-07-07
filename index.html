@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026 软件工程总复习 · 详细解析</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-layer" id="bgLayer" aria-hidden="true"></div>
+  <div class="bg-overlay" id="bgOverlay" aria-hidden="true"></div>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <span class="brand-icon">📘</span>
+        <div>
+          <h1>软件工程总复习</h1>
+          <p>2026 详细解析版</p>
+        </div>
+      </div>
+      <div class="search-box">
+        <input type="search" id="searchInput" placeholder="搜索知识点…" autocomplete="off">
+      </div>
+      <nav id="chapterNav"></nav>
+      <div class="sidebar-footer">
+        <button id="toggleExamMode" class="btn-secondary">📝 考试题型速览</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">☰</button>
+        <div class="breadcrumb" id="breadcrumb">首页</div>
+        <div class="topbar-actions">
+          <button id="bgBtn" class="btn-ghost" title="自定义背景">🖼 背景</button>
+          <button id="shareBtn" class="btn-ghost" title="分享链接">🔗 分享</button>
+          <button id="expandAll" class="btn-ghost">全部展开</button>
+          <button id="collapseAll" class="btn-ghost">全部折叠</button>
+        </div>
+      </header>
+
+      <section class="hero" id="hero">
+        <div class="hero-content">
+          <span class="badge">对照复习提纲 · 逐题详解</span>
+          <h2>软件工程总复习 · 完整解析</h2>
+          <p>覆盖 PDF 复习提纲全部章节，含概念辨析、考点提示、应用题解题步骤与常考对比表。每节附带<strong>大白话解释</strong>和<strong>记忆口诀</strong>。</p>
+          <div class="hero-stats">
+            <div class="stat"><strong>9</strong><span>章核心内容</span></div>
+            <div class="stat"><strong>15+</strong><span>例题详解</span></div>
+            <div class="stat"><strong>5</strong><span>大考试题型</span></div>
+          </div>
+        </div>
+        <div class="exam-card" id="examOverview">
+          <h3>📋 考试题型结构</h3>
+          <ul>
+            <li><span>单选题</span><strong>20 分</strong></li>
+            <li><span>判断题</span><strong>10 分</strong></li>
+            <li><span>填空题</span><strong>10 题 · 20 分</strong></li>
+            <li><span>简答题</span><strong>4 题 · 20 分</strong></li>
+            <li><span>应用题</span><strong>3 题 · 30 分</strong></li>
+          </ul>
+          <p class="exam-tip">应用题常考：ER 图、用例图、DFD、DFD→结构图、环形复杂度、逻辑覆盖、盒图/N-S 图、程序流图、黑盒测试用例</p>
+        </div>
+      </section>
+
+      <article class="content" id="content"></article>
+
+      <footer class="footer">
+        <p>基于《2026 软件工程总复习》提纲整理 · 仅供学习参考</p>
+      </footer>
+    </main>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <!-- 背景设置面板 -->
+  <div class="modal" id="bgPanel">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🖼 自定义背景</h3>
+        <button class="modal-close" id="bgClose">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">背景图片会<strong>自适应铺满</strong>屏幕（cover），上传后保存在本浏览器，刷新后仍然有效。</p>
+        <p class="bg-status" id="bgStatus">当前：默认淡色背景</p>
+        <div class="form-group">
+          <label>上传本地图片</label>
+          <input type="file" id="bgFile" accept="image/*">
+        </div>
+        <div class="form-group">
+          <label>或输入图片网址</label>
+          <div class="input-row">
+            <input type="url" id="bgUrlInput" placeholder="https://example.com/photo.jpg">
+            <button class="btn-primary" id="bgUrlApply">应用</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>遮罩透明度（保证文字可读）<span id="bgOpacityVal">88%</span></label>
+          <input type="range" id="bgOpacity" min="40" max="98" value="88">
+        </div>
+        <button class="btn-reset" id="bgReset">恢复默认背景</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分享面板 -->
+  <div class="modal" id="shareModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🔗 分享给别人</h3>
+        <button class="modal-close" id="shareClose">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="share-block">
+          <h4>① 当前页面链接</h4>
+          <p class="share-url" id="shareUrl"></p>
+          <button class="btn-primary" id="copyShareUrl">复制链接</button>
+        </div>
+        <div class="share-block">
+          <h4>② 局域网分享（同一 WiFi）</h4>
+          <p class="share-url" id="shareLan"></p>
+          <button class="btn-primary" id="copyLanUrl">复制说明</button>
+          <p class="share-tip">双击运行 <code>start-server.bat</code> 启动服务，把 IP 地址发给同学即可。</p>
+        </div>
+        <div class="share-block highlight-block">
+          <h4>③ 公网永久链接（推荐）</h4>
+          <ol class="deploy-steps">
+            <li>在 GitHub 新建仓库，上传本文件夹全部文件</li>
+            <li>仓库 Settings → Pages → Source 选 <strong>GitHub Actions</strong></li>
+            <li>推送后几分钟获得地址：<br><code>https://你的用户名.github.io/仓库名/</code></li>
+          </ol>
+          <p class="share-tip">部署后任何人打开链接都能学习，无需安装任何东西。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="examples.js"></script>
+  <script src="memos.js"></script>
+  <script src="app.js"></script>
+  <script src="bg.js"></script>
+</body>
+</html>
