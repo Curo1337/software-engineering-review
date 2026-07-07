@@ -12,7 +12,10 @@
   <div class="app">
     <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <span class="brand-icon">📘</span>
+        <button type="button" class="brand-avatar" id="brandAvatarBtn" title="点击更换头像">
+          <span class="brand-avatar-fallback" id="brandAvatarFallback">📘</span>
+          <img class="brand-avatar-img" id="brandAvatarImg" alt="头像" hidden>
+        </button>
         <div>
           <h1>软件工程总复习</h1>
           <p>2026 详细解析版</p>
@@ -135,10 +138,43 @@
     </div>
   </div>
 
+  <!-- 头像设置面板 -->
+  <div class="modal" id="avatarPanel">
+    <div class="modal-box modal-box-sm">
+      <div class="modal-header">
+        <h3>👤 自定义头像</h3>
+        <button class="modal-close" id="avatarClose">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="avatar-preview-wrap">
+          <div class="avatar-preview-ring">
+            <span class="avatar-preview-fallback" id="avatarPreviewFallback">📘</span>
+            <img class="avatar-preview-img" id="avatarPreview" alt="头像预览" hidden>
+          </div>
+          <p class="avatar-preview-tip">点击左上角头像可快速打开此面板</p>
+        </div>
+        <p class="bg-status" id="avatarStatus">当前：默认图标 📘</p>
+        <div class="form-group">
+          <label>上传本地图片</label>
+          <input type="file" id="avatarFile" accept="image/*">
+        </div>
+        <div class="form-group">
+          <label>或输入图片网址</label>
+          <div class="input-row">
+            <input type="url" id="avatarUrlInput" placeholder="https://example.com/avatar.jpg">
+            <button class="btn-primary" id="avatarUrlApply">应用</button>
+          </div>
+        </div>
+        <button class="btn-reset" id="avatarReset">恢复默认头像</button>
+      </div>
+    </div>
+  </div>
+
   <script src="data.js"></script>
   <script src="examples.js"></script>
   <script src="memos.js"></script>
   <script src="app.js"></script>
   <script src="bg.js"></script>
+  <script src="avatar.js"></script>
 </body>
 </html>
