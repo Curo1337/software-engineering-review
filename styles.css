@@ -127,6 +127,11 @@ body.has-custom-bg .exam-card {
   align-items: center;
   justify-content: center;
   transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  z-index: 2;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
 }
 
 .brand-avatar:hover {
@@ -137,6 +142,8 @@ body.has-custom-bg .exam-card {
 .brand-avatar-fallback {
   font-size: 1.6rem;
   line-height: 1;
+  pointer-events: none;
+  user-select: none;
 }
 
 .brand-avatar-img {
@@ -144,6 +151,8 @@ body.has-custom-bg .exam-card {
   height: 100%;
   object-fit: cover;
   display: block;
+  pointer-events: none;
+  user-select: none;
 }
 
 .brand-avatar-img[hidden],

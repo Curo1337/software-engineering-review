@@ -14,6 +14,14 @@
 
   function $(id) { return document.getElementById(id); }
 
+  function openAvatarPanel() {
+    $('avatarPanel')?.classList.add('show');
+  }
+
+  function closeAvatarPanel() {
+    $('avatarPanel')?.classList.remove('show');
+  }
+
   function openDb() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, 1);
@@ -34,23 +42,29 @@
   }
 
   async function loadImageBlob() {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(DB_STORE, 'readonly');
-      const req = tx.objectStore(DB_STORE).get('avatar');
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error);
-    });
+    try {
+      const db = await openDb();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readonly');
+        const req = tx.objectStore(DB_STORE).get('avatar');
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (_) {
+      return null;
+    }
   }
 
   async function clearImageBlob() {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(DB_STORE, 'readwrite');
-      tx.objectStore(DB_STORE).delete('avatar');
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
+    try {
+      const db = await openDb();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).delete('avatar');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (_) { /* ignore */ }
   }
 
   function saveSettings() {
@@ -102,13 +116,24 @@
     }
   }
 
+  function showFallback(fallback, imgEl) {
+    if (fallback) {
+      fallback.hidden = false;
+      fallback.textContent = DEFAULT_EMOJI;
+    }
+    if (imgEl) {
+      imgEl.hidden = true;
+      imgEl.removeAttribute('src');
+    }
+  }
+
   async function applyAvatar() {
     const imgEl = $('brandAvatarImg');
     const fallback = $('brandAvatarFallback');
     const preview = $('avatarPreview');
     const previewFallback = $('avatarPreviewFallback');
     const status = $('avatarStatus');
-    if (!imgEl || !fallback) return;
+    if (!fallback) return;
 
     revokeObjectUrl();
     let url = settings.avatarUrl;
@@ -118,28 +143,37 @@
       if (blob) {
         objectUrl = URL.createObjectURL(blob);
         url = objectUrl;
+      } else {
+        settings.avatarSource = 'default';
+        settings.avatarUrl = '';
+        saveSettings();
       }
     }
 
     const hasCustom = !!url;
 
-    imgEl.hidden = !hasCustom;
-    fallback.hidden = hasCustom;
-    if (hasCustom) {
+    if (hasCustom && imgEl) {
+      fallback.hidden = true;
+      imgEl.hidden = false;
       imgEl.src = url;
     } else {
-      imgEl.removeAttribute('src');
-      fallback.textContent = DEFAULT_EMOJI;
+      showFallback(fallback, imgEl);
     }
 
     if (preview && previewFallback) {
-      preview.hidden = !hasCustom;
-      previewFallback.hidden = hasCustom;
-      if (hasCustom) preview.src = url;
+      if (hasCustom) {
+        previewFallback.hidden = true;
+        preview.hidden = false;
+        preview.src = url;
+      } else {
+        preview.hidden = true;
+        previewFallback.hidden = false;
+        preview.removeAttribute('src');
+      }
     }
 
     if (status) {
-      if (settings.avatarSource === 'upload') status.textContent = '当前：本地上传的头像';
+      if (settings.avatarSource === 'upload' && hasCustom) status.textContent = '当前：本地上传的头像';
       else if (settings.avatarSource === 'url' && settings.avatarUrl) status.textContent = '当前：网络图片头像';
       else status.textContent = '当前：默认图标 📘';
     }
@@ -189,8 +223,25 @@
     await applyAvatar();
   }
 
+  function bindAvatarOpeners() {
+    const targets = [
+      $('brandAvatarBtn'),
+      $('avatarBtn')
+    ];
+
+    targets.forEach(el => {
+      if (!el) return;
+      el.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        openAvatarPanel();
+      });
+    });
+  }
+
   function initAvatarPanel() {
-    const btn = $('brandAvatarBtn');
+    bindAvatarOpeners();
+
     const panel = $('avatarPanel');
     const closeBtn = $('avatarClose');
     const fileInput = $('avatarFile');
@@ -198,10 +249,9 @@
     const urlInput = $('avatarUrlInput');
     const resetBtn = $('avatarReset');
 
-    btn?.addEventListener('click', () => panel?.classList.add('show'));
-    closeBtn?.addEventListener('click', () => panel?.classList.remove('show'));
+    closeBtn?.addEventListener('click', closeAvatarPanel);
     panel?.addEventListener('click', e => {
-      if (e.target === panel) panel.classList.remove('show');
+      if (e.target === panel) closeAvatarPanel();
     });
 
     fileInput?.addEventListener('change', e => {
@@ -214,7 +264,15 @@
     resetBtn?.addEventListener('click', () => resetAvatar());
   }
 
-  loadSettingsFromStorage();
-  initAvatarPanel();
-  applyAvatar();
+  function init() {
+    loadSettingsFromStorage();
+    initAvatarPanel();
+    applyAvatar().catch(() => showFallback($('brandAvatarFallback'), $('brandAvatarImg')));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
