@@ -1,0 +1,14 @@
+{
+  "name": "se-review-netease-api",
+  "private": true,
+  "description": "网易云音乐 API 代理，供复习网站音乐播放器调用",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "NeteaseCloudMusicApi": "^4.32.0"
+  }
+}

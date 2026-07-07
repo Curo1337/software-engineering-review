@@ -16,10 +16,10 @@
           <span class="brand-avatar-fallback" id="brandAvatarFallback">📘</span>
           <img class="brand-avatar-img" id="brandAvatarImg" alt="头像" hidden>
         </button>
-        <div>
-          <h1>软件工程总复习</h1>
-          <p>2026 详细解析版</p>
-        </div>
+        <button type="button" class="brand-text-btn" id="brandTextBtn" title="点击修改名称">
+          <h1 id="brandTitle">软件工程总复习</h1>
+          <p id="brandSubtitle">2026 详细解析版</p>
+        </button>
       </div>
       <div class="search-box">
         <input type="search" id="searchInput" placeholder="搜索知识点…" autocomplete="off">
@@ -35,6 +35,8 @@
         <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">☰</button>
         <div class="breadcrumb" id="breadcrumb">首页</div>
         <div class="topbar-actions">
+          <button id="musicBtn" class="btn-ghost" title="网易云音乐">🎵 音乐</button>
+          <button id="brandBtn" class="btn-ghost" title="自定义名称">✏️ 名称</button>
           <button id="avatarBtn" class="btn-ghost" title="自定义头像">👤 头像</button>
           <button id="bgBtn" class="btn-ghost" title="自定义背景">🖼 背景</button>
           <button id="shareBtn" class="btn-ghost" title="分享链接">🔗 分享</button>
@@ -139,6 +141,111 @@
     </div>
   </div>
 
+  <!-- 名称设置面板 -->
+  <div class="modal" id="brandPanel">
+    <div class="modal-box modal-box-sm">
+      <div class="modal-header">
+        <h3>✏️ 自定义名称</h3>
+        <button class="modal-close" id="brandClose">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">修改侧栏左上角显示的<strong>主标题</strong>和<strong>副标题</strong>，保存在本浏览器，刷新后仍然有效。</p>
+        <div class="brand-name-preview">
+          <strong id="brandPreviewTitle">软件工程总复习</strong>
+          <span id="brandPreviewSubtitle">2026 详细解析版</span>
+        </div>
+        <div class="form-group">
+          <label for="brandTitleInput">主标题</label>
+          <input type="text" id="brandTitleInput" maxlength="30" placeholder="软件工程总复习" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="brandSubtitleInput">副标题</label>
+          <input type="text" id="brandSubtitleInput" maxlength="40" placeholder="2026 详细解析版" autocomplete="off">
+        </div>
+        <button class="btn-primary brand-apply-btn" id="brandApply">应用</button>
+        <button class="btn-reset" id="brandReset">恢复默认名称</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部音乐播放器 -->
+  <div class="music-player" id="musicPlayer">
+    <div class="music-player-cover">
+      <span class="music-player-cover-fallback" id="musicCoverFallback">🎵</span>
+      <img class="music-player-cover-img" id="musicCover" alt="封面" hidden>
+    </div>
+    <div class="music-player-main">
+      <div class="music-player-info">
+        <div class="music-player-title" id="musicTitle">未播放</div>
+        <div class="music-player-artist" id="musicArtist">打开音乐面板搜索或加载歌单</div>
+      </div>
+      <input type="range" class="music-progress" id="musicProgress" min="0" max="100" value="0" aria-label="播放进度">
+    </div>
+    <div class="music-player-controls">
+      <button type="button" class="music-ctrl-btn" id="musicPrev" title="上一首">⏮</button>
+      <button type="button" class="music-ctrl-btn music-ctrl-main" id="musicPlayPause" title="播放/暂停">▶</button>
+      <button type="button" class="music-ctrl-btn" id="musicNext" title="下一首">⏭</button>
+      <button type="button" class="music-ctrl-btn" id="musicOpenPanel" title="打开音乐库">🎶</button>
+      <input type="range" class="music-volume" id="musicVolume" min="0" max="100" value="75" aria-label="音量">
+    </div>
+  </div>
+
+  <!-- 音乐面板 -->
+  <div class="modal" id="musicPanel">
+    <div class="modal-box modal-box-music">
+      <div class="modal-header">
+        <h3>🎵 网易云音乐</h3>
+        <button class="modal-close" id="musicClose">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">通过 <strong>NeteaseCloudMusicApi</strong> 连接网易云音乐后端，支持搜索歌曲、加载歌单。需先启动 API 服务（本地或 Vercel 部署）。</p>
+        <p class="bg-status" id="musicStatus">正在检测 API…</p>
+
+        <div class="music-tabs">
+          <button type="button" class="music-tab active" data-tab="search">搜索</button>
+          <button type="button" class="music-tab" data-tab="playlist">歌单</button>
+          <button type="button" class="music-tab" data-tab="settings">API 设置</button>
+        </div>
+
+        <div class="music-tab-panel active" data-panel="search">
+          <div class="input-row music-search-row">
+            <input type="search" id="musicSearchInput" placeholder="搜索歌曲、歌手…" autocomplete="off">
+            <button class="btn-primary" id="musicSearchBtn">搜索</button>
+          </div>
+          <div class="music-results" id="musicResults">
+            <p class="music-empty">输入关键词搜索网易云音乐</p>
+          </div>
+        </div>
+
+        <div class="music-tab-panel" data-panel="playlist">
+          <div class="form-group">
+            <label for="musicPlaylistInput">网易云歌单 ID</label>
+            <input type="text" id="musicPlaylistInput" placeholder="例如 3778678（飙升榜）" autocomplete="off">
+            <p class="music-hint">在歌单分享链接中找到 id，如 music.163.com/#/playlist?id=<strong>3778678</strong></p>
+          </div>
+          <button class="btn-primary brand-apply-btn" id="musicPlaylistLoad">加载并播放歌单</button>
+        </div>
+
+        <div class="music-tab-panel" data-panel="settings">
+          <div class="form-group">
+            <label for="musicApiInput">API 服务地址</label>
+            <input type="url" id="musicApiInput" placeholder="http://127.0.0.1:3000" autocomplete="off">
+            <p class="music-hint">本地：双击 <code>start-music-api.bat</code> 或运行 <code>npx NeteaseCloudMusicApi@latest</code></p>
+            <p class="music-hint">公网：Fork <a href="https://gitlab.com/Binaryify/NeteaseCloudMusicApi" target="_blank" rel="noopener">NeteaseCloudMusicApi</a> 部署到 Vercel 后填入地址</p>
+          </div>
+          <div class="input-row">
+            <button class="btn-primary" id="musicApiSave">保存地址</button>
+            <button class="btn-secondary" id="musicApiTest">测试连接</button>
+          </div>
+          <div class="form-group">
+            <label for="musicVolumePanel">音量</label>
+            <input type="range" id="musicVolumePanel" min="0" max="100" value="75">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 头像设置面板 -->
   <div class="modal" id="avatarPanel">
     <div class="modal-box modal-box-sm">
@@ -177,6 +284,8 @@
   <script src="memos.js"></script>
   <script src="app.js"></script>
   <script src="bg.js"></script>
+  <script src="brand.js"></script>
+  <script src="music.js"></script>
   <script src="avatar.js"></script>
 </body>
 </html>
