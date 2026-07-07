@@ -181,6 +181,10 @@
           <span class="music-player-state" id="musicPlayState">待机</span>
         </div>
         <div class="music-player-artist" id="musicArtist">打开音乐面板搜索或加载歌单</div>
+        <div class="music-player-meta">
+          <span class="music-quality-badge" id="musicQualityBadge" hidden>较高</span>
+          <select class="music-quality-player" id="musicQualityPlayer" title="播放音质" aria-label="播放音质"></select>
+        </div>
       </div>
       <div class="music-progress-wrap">
         <span class="music-time-current" id="musicTimeCurrent">00:00</span>
@@ -271,6 +275,11 @@
           <div class="input-row">
             <button class="btn-primary" id="musicApiSave">保存地址</button>
             <button class="btn-secondary" id="musicApiTest">测试连接</button>
+          </div>
+          <div class="form-group">
+            <label for="musicQualitySelect">播放音质</label>
+            <select id="musicQualitySelect" class="music-quality-select"></select>
+            <p class="music-hint">极高/无损/Hi-Res 需扫码登录且有相应 VIP；切换音质会重新加载当前歌曲</p>
           </div>
           <div class="form-group">
             <label for="musicVolumePanel">音量</label>

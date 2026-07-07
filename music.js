@@ -2,13 +2,21 @@
   const STORAGE_KEY = 'se-review-music-settings';
   const DEFAULT_API = 'http://127.0.0.1:3000';
   const DEFAULT_PLAYLIST_ID = '3778678';
+  const QUALITY_OPTIONS = [
+    { value: 'standard', label: '标准', hint: '约 128k，省流量' },
+    { value: 'higher', label: '较高', hint: '约 192k，推荐' },
+    { value: 'exhigh', label: '极高', hint: '约 320k，需登录' },
+    { value: 'lossless', label: '无损', hint: 'FLAC，需黑胶 VIP' },
+    { value: 'hires', label: 'Hi-Res', hint: '高解析度，需 SVIP' }
+  ];
 
   const defaults = {
     apiBase: DEFAULT_API,
     volume: 0.75,
     playlistId: DEFAULT_PLAYLIST_ID,
     neteaseCookie: '',
-    loginNickname: ''
+    loginNickname: '',
+    audioQuality: 'higher'
   };
 
   let settings = { ...defaults };
@@ -18,6 +26,7 @@
   let hasLoadedTrack = false;
   let qrPollTimer = null;
   let qrUnikey = '';
+  let currentPlayLevel = '';
   const audio = new Audio();
 
   function $(id) { return document.getElementById(id); }
@@ -27,6 +36,9 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) settings = { ...defaults, ...JSON.parse(raw) };
     } catch (_) { /* ignore */ }
+    if (!QUALITY_OPTIONS.some(q => q.value === settings.audioQuality)) {
+      settings.audioQuality = defaults.audioQuality;
+    }
   }
 
   function saveSettings() {
@@ -143,15 +155,32 @@
     return data.playlist?.tracks || [];
   }
 
-  async function getSongUrl(id) {
-    const levels = hasLogin() ? ['exhigh', 'higher', 'standard'] : ['standard', 'higher'];
+  function getQualityLabel(value) {
+    return QUALITY_OPTIONS.find(q => q.value === value)?.label || value;
+  }
+
+  function getQualityFallbackChain(preferred) {
+    const chains = {
+      hires: ['hires', 'lossless', 'exhigh', 'higher', 'standard'],
+      lossless: ['lossless', 'exhigh', 'higher', 'standard'],
+      exhigh: ['exhigh', 'higher', 'standard'],
+      higher: ['higher', 'standard'],
+      standard: ['standard']
+    };
+    return chains[preferred] || chains.higher;
+  }
+
+  async function getSongUrl(id, preferredLevel) {
+    const levels = getQualityFallbackChain(preferredLevel || settings.audioQuality || 'higher');
     let lastError = null;
 
     for (const level of levels) {
       try {
         const data = await neteaseApi('/song/url/v1', { id, level });
         const item = data.data?.[0];
-        if (item?.url) return item.url;
+        if (item?.url) {
+          return { url: item.url, level: item.level || level };
+        }
         lastError = new Error('该歌曲暂无法播放（可能是 VIP 或版权限制）');
       } catch (err) {
         lastError = err;
@@ -481,7 +510,44 @@
     if (progress) progress.value = '0';
   }
 
+  function updateQualityBadge() {
+    const badge = $('musicQualityBadge');
+    if (!badge) return;
+    if (!currentPlayLevel) {
+      badge.hidden = true;
+      return;
+    }
+    badge.hidden = false;
+    badge.textContent = getQualityLabel(currentPlayLevel);
+  }
+
+  function syncQualitySelect() {
+    const select = $('musicQualitySelect');
+    const playerSelect = $('musicQualityPlayer');
+    [select, playerSelect].forEach(el => {
+      if (el) el.value = settings.audioQuality;
+    });
+  }
+
   function setPlayerVisible(show) {
+    $('musicPlayer')?.classList.toggle('active', show);
+  }
+
+  function initQualitySelects() {
+    const optionsHtml = QUALITY_OPTIONS.map(q =>
+      `<option value="${q.value}">${q.label} · ${q.hint}</option>`
+    ).join('');
+
+    const select = $('musicQualitySelect');
+    const playerSelect = $('musicQualityPlayer');
+    if (select) select.innerHTML = optionsHtml;
+    if (playerSelect) {
+      playerSelect.innerHTML = QUALITY_OPTIONS.map(q =>
+        `<option value="${q.value}">${q.label}</option>`
+      ).join('');
+    }
+    syncQualitySelect();
+  }
     $('musicPlayer')?.classList.toggle('active', show);
   }
 
@@ -580,13 +646,17 @@
     setStatus(`正在加载：${song.name}…`);
 
     try {
-      const url = await getSongUrl(song.id);
-      audio.src = url;
+      const result = await getSongUrl(song.id);
+      audio.src = result.url;
+      currentPlayLevel = result.level;
       audio.volume = settings.volume;
       await audio.play();
       syncPlayerControls();
-      setStatus(`正在播放：${song.name}${hasLogin() ? '' : '（未登录，VIP 歌曲可能无法播放）'}`);
+      updateQualityBadge();
+      setStatus(`正在播放：${song.name} · ${getQualityLabel(currentPlayLevel)}${hasLogin() ? '' : '（未登录，VIP 歌曲可能无法播放）'}`);
     } catch (err) {
+      currentPlayLevel = '';
+      updateQualityBadge();
       syncPlayerControls();
       setStatus(err.message, true);
       if (!hasLogin() && /登录|VIP/i.test(err.message)) {
@@ -679,6 +749,7 @@
       playlistInput.value = settings.playlistId;
     }
     if (volumeInput) volumeInput.value = Math.round(settings.volume * 100);
+    syncQualitySelect();
   }
 
   async function handleSearch() {
@@ -720,6 +791,48 @@
     testApiConnection();
   }
 
+  async function handleQualityChange(source) {
+    const select = source === 'player' ? $('musicQualityPlayer') : $('musicQualitySelect');
+    const value = select?.value;
+    if (!value || value === settings.audioQuality) return;
+
+    settings.audioQuality = value;
+    saveSettings();
+    syncQualitySelect();
+
+    const song = queue[queueIndex];
+    if (!song || !audio.src) {
+      setStatus(`音质已设为：${getQualityLabel(value)}`);
+      return;
+    }
+
+    const wasPlaying = isAudioPlaying();
+    const savedTime = audio.currentTime;
+    setStatus(`正在切换音质：${getQualityLabel(value)}…`);
+
+    try {
+      const result = await getSongUrl(song.id, value);
+      audio.src = result.url;
+      currentPlayLevel = result.level;
+      updateQualityBadge();
+
+      const applyTime = () => {
+        if (savedTime > 0 && Number.isFinite(audio.duration)) {
+          audio.currentTime = Math.min(savedTime, audio.duration);
+        }
+        updateProgressDisplay();
+      };
+
+      if (audio.readyState >= 1) applyTime();
+      else audio.addEventListener('loadedmetadata', applyTime, { once: true });
+
+      if (wasPlaying) await audio.play();
+      setStatus(`正在播放：${song.name} · ${getQualityLabel(currentPlayLevel)}`);
+    } catch (err) {
+      setStatus(err.message, true);
+    }
+  }
+
   function bindEvents() {
     $('musicBtn')?.addEventListener('click', () => openMusicPanel('search'));
     $('musicOpenPanel')?.addEventListener('click', () => openMusicPanel('search'));
@@ -740,6 +853,9 @@
     $('musicPlaylistLoad')?.addEventListener('click', handleLoadPlaylist);
     $('musicApiSave')?.addEventListener('click', handleSaveApi);
     $('musicApiTest')?.addEventListener('click', testApiConnection);
+
+    $('musicQualitySelect')?.addEventListener('change', () => handleQualityChange('settings'));
+    $('musicQualityPlayer')?.addEventListener('change', () => handleQualityChange('player'));
 
     $('musicToggleBtn')?.addEventListener('click', togglePlayPause);
     $('musicNext')?.addEventListener('click', playNext);
@@ -813,6 +929,7 @@
     if (panelVol) panelVol.value = String(Math.round(settings.volume * 100));
 
     bindEvents();
+    initQualitySelects();
     syncPanelSettings();
     hideAllQrViews('切换到本页后将自动加载二维码');
     updateLoginUI(settings.loginNickname ? { nickname: settings.loginNickname } : null);
