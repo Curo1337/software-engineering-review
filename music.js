@@ -548,8 +548,6 @@
     }
     syncQualitySelect();
   }
-    $('musicPlayer')?.classList.toggle('active', show);
-  }
 
   function updatePlayStateLabel() {
     const state = $('musicPlayState');
