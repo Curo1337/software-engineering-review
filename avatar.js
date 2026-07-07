@@ -80,22 +80,20 @@
     } catch (_) { /* ignore */ }
   }
 
-  function compressAvatar(file, maxSize = 256, quality = 0.85) {
+  function compressAvatar(file, outputSize = 128, quality = 0.88) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = e => {
         const img = new Image();
         img.onload = () => {
-          let w = img.width;
-          let h = img.height;
-          const scale = Math.min(maxSize / w, maxSize / h, 1);
-          w = Math.round(w * scale);
-          h = Math.round(h * scale);
+          const side = Math.min(img.width, img.height);
+          const sx = Math.floor((img.width - side) / 2);
+          const sy = Math.floor((img.height - side) / 2);
           const canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
+          canvas.width = outputSize;
+          canvas.height = outputSize;
           const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
+          ctx.drawImage(img, sx, sy, side, side, 0, 0, outputSize, outputSize);
           canvas.toBlob(blob => {
             if (blob) resolve(blob);
             else reject(new Error('头像压缩失败'));

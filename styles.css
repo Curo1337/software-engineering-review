@@ -19,6 +19,8 @@
   --shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
   --font: "FangSong", "仿宋", STFangsong, serif;
   --sidebar-w: 300px;
+  --avatar-size: 36px;
+  --avatar-emoji-size: 1.22rem;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -108,24 +110,30 @@ body.has-custom-bg .exam-card {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 24px 20px;
+  gap: 10px;
+  padding: 16px 14px;
   border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.brand > div {
+  min-width: 0;
+  flex: 1;
 }
 
 .brand-avatar {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  flex: 0 0 var(--avatar-size);
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  max-width: var(--avatar-size);
+  max-height: var(--avatar-size);
   padding: 0;
-  border: 2px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 50%;
   background: var(--bg);
   cursor: pointer;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   transition: border-color 0.2s, box-shadow 0.2s;
   position: relative;
   z-index: 2;
@@ -140,16 +148,26 @@ body.has-custom-bg .exam-card {
 }
 
 .brand-avatar-fallback {
-  font-size: 1.6rem;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--avatar-emoji-size);
   line-height: 1;
   pointer-events: none;
   user-select: none;
 }
 
 .brand-avatar-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: cover;
+  object-position: center center;
   display: block;
   pointer-events: none;
   user-select: none;
@@ -170,11 +188,11 @@ body.has-custom-bg .exam-card {
 }
 
 .avatar-preview-ring {
-  width: 88px;
-  height: 88px;
+  width: calc(var(--avatar-size) * 2);
+  height: calc(var(--avatar-size) * 2);
   margin: 0 auto 10px;
   border-radius: 50%;
-  border: 3px solid var(--accent);
+  border: 2px solid var(--accent);
   overflow: hidden;
   background: var(--bg);
   display: flex;
@@ -183,13 +201,14 @@ body.has-custom-bg .exam-card {
 }
 
 .avatar-preview-fallback {
-  font-size: 2.4rem;
+  font-size: calc(var(--avatar-size) * 0.72);
 }
 
 .avatar-preview-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
 }
 
 .avatar-preview-img[hidden],
@@ -1025,6 +1044,11 @@ body.has-custom-bg .exam-card {
 
 /* Responsive */
 @media (max-width: 960px) {
+  :root {
+    --avatar-size: 34px;
+    --avatar-emoji-size: 1.15rem;
+  }
+
   .hero {
     grid-template-columns: 1fr;
   }
@@ -1043,6 +1067,11 @@ body.has-custom-bg .exam-card {
 }
 
 @media (max-width: 600px) {
+  :root {
+    --avatar-size: 32px;
+    --avatar-emoji-size: 1.08rem;
+  }
+
   .hero-stats { flex-direction: column; gap: 12px; }
   .content { padding: 0 16px 32px; }
   .topbar { padding: 12px 16px; }
