@@ -53,7 +53,7 @@
 
     if (pageHttps && apiHttp) {
       if (apiLocal) {
-        return '当前是 HTTPS 网页，无法访问本机 API。请把 API 部署到 Vercel（HTTPS），在「设置」填入地址。';
+        return '在线网页无法直连本机 API。请运行 start-music-tunnel.bat 获取 https 地址，或用 Render 部署 netease-api 文件夹。';
       }
       return '网页是 HTTPS，API 是 HTTP，浏览器会拦截。请使用 HTTPS 的 API 地址。';
     }
@@ -391,7 +391,7 @@
       }, 2000);
     } catch (err) {
       showQrPlaceholder('获取二维码失败');
-      setQrTip('本地请运行 <code>start-music-api.bat</code>；在线网页需配置 HTTPS 的 API');
+      setQrTip('本地请运行 <code>start-music-tunnel.bat</code> 或 <code>start-music-api.bat</code>');
       setStatus(err.message, true);
     } finally {
       if (qrStart) {

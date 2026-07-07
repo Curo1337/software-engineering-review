@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: se-review-netease-api
+    runtime: node
+    rootDir: netease-api
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

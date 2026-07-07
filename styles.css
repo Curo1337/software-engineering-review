@@ -1436,6 +1436,41 @@ body.has-custom-bg .music-player {
   margin-bottom: 10px;
 }
 
+.music-api-guide {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.music-api-guide h4 {
+  font-size: 0.92rem;
+  margin-bottom: 10px;
+}
+
+.music-api-steps {
+  padding-left: 20px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.music-api-steps strong {
+  color: var(--text);
+}
+
+.music-api-steps code {
+  font-size: 0.76rem;
+  background: var(--bg-hover);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.music-api-steps a {
+  color: var(--accent);
+}
+
 .music-volume {
   width: 72px;
   accent-color: var(--accent);

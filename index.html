@@ -251,11 +251,18 @@
         </div>
 
         <div class="music-tab-panel" data-panel="settings">
+          <div class="music-api-guide">
+            <h4>API 配置方式（任选其一）</h4>
+            <ol class="music-api-steps">
+              <li><strong>最简单（推荐）</strong>：双击项目里的 <code>start-music-tunnel.bat</code>，复制生成的 <code>https://xxx.trycloudflare.com</code> 地址粘贴到下方</li>
+              <li><strong>纯本地</strong>：双击 <code>start-music-api.bat</code>，地址填 <code>http://127.0.0.1:3000</code>（仅本机打开网站时有效）</li>
+              <li><strong>Render 部署</strong>：登录 <a href="https://render.com" target="_blank" rel="noopener">render.com</a> → New Web Service → 连接你<strong>现有的 GitHub 仓库</strong> → Root Directory 填 <code>netease-api</code> → 部署后复制 <code>https://xxx.onrender.com</code></li>
+              <li><strong>一行命令</strong>：终端运行 <code>npx NeteaseCloudMusicApi@latest</code>，地址填 <code>http://127.0.0.1:3000</code></li>
+            </ol>
+          </div>
           <div class="form-group">
             <label for="musicApiInput">API 服务地址</label>
-            <input type="url" id="musicApiInput" placeholder="http://127.0.0.1:3000" autocomplete="off">
-            <p class="music-hint">本地：双击 <code>start-music-api.bat</code> 或运行 <code>npx NeteaseCloudMusicApi@latest</code></p>
-            <p class="music-hint">公网：Fork <a href="https://gitlab.com/Binaryify/NeteaseCloudMusicApi" target="_blank" rel="noopener">NeteaseCloudMusicApi</a> 部署到 Vercel 后填入地址</p>
+            <input type="url" id="musicApiInput" placeholder="https://xxx.trycloudflare.com 或 http://127.0.0.1:3000" autocomplete="off">
           </div>
           <div class="input-row">
             <button class="btn-primary" id="musicApiSave">保存地址</button>
