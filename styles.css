@@ -211,6 +211,19 @@ body.has-custom-bg .exam-card {
 .nav-q-btn.active {
   color: var(--accent);
   background: var(--bg-hover);
+  font-weight: 600;
+}
+
+.nav-q-btn.active {
+  border-left: 3px solid var(--accent);
+  padding-left: 17px;
+  background: var(--accent-soft);
+}
+
+.question-card.spy-active,
+.example-card.spy-active {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
 .sidebar-footer {

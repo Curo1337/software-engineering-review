@@ -13,6 +13,13 @@
   const hero = document.getElementById('hero');
 
   let activeChapter = null;
+  let activeQuestionId = null;
+  let scrollSpyPausedUntil = 0;
+  let scrollSpyBound = false;
+
+  function pauseScrollSpy(ms = 900) {
+    scrollSpyPausedUntil = Date.now() + ms;
+  }
 
   function getExamples(chapterId) {
     return (typeof EXAMPLE_DATA !== 'undefined' && EXAMPLE_DATA[chapterId]) || [];
@@ -63,6 +70,7 @@
     const card = document.createElement('article');
     card.className = (isExample ? 'example-card' : 'question-card') + (openByDefault ? ' open' : '');
     card.id = item.id;
+    card.dataset.spySection = 'true';
 
     const tagsHtml = (item.tags || [])
       .map(t => `<span class="tag ${t}">${t}</span>`)
@@ -120,12 +128,14 @@
 
       const wrap = document.createElement('div');
       wrap.className = 'nav-chapter';
+      wrap.dataset.chapterId = chapter.id;
 
       const btn = document.createElement('button');
       btn.className = 'nav-chapter-btn' + (activeChapter === chapter.id ? ' active' : '');
       btn.innerHTML = `<span>${chapter.title}</span><span class="count">${total}</span>`;
       btn.addEventListener('click', () => {
         activeChapter = chapter.id;
+        pauseScrollSpy();
         renderNav(searchInput.value);
         scrollToChapter(chapter.id);
         closeSidebarMobile();
@@ -136,9 +146,11 @@
 
       matchedQuestions.forEach(item => {
         const qBtn = document.createElement('button');
-        qBtn.className = 'nav-q-btn';
+        qBtn.className = 'nav-q-btn' + (activeQuestionId === item.id ? ' active' : '');
+        qBtn.dataset.itemId = item.id;
         qBtn.textContent = item.title;
         qBtn.addEventListener('click', () => {
+          pauseScrollSpy();
           scrollToQuestion(item.id);
           closeSidebarMobile();
         });
@@ -147,9 +159,11 @@
 
       matchedExamples.forEach(item => {
         const qBtn = document.createElement('button');
-        qBtn.className = 'nav-q-btn';
+        qBtn.className = 'nav-q-btn' + (activeQuestionId === item.id ? ' active' : '');
+        qBtn.dataset.itemId = item.id;
         qBtn.textContent = '📝 ' + item.title.replace(/^【例题】/, '');
         qBtn.addEventListener('click', () => {
+          pauseScrollSpy();
           scrollToQuestion(item.id);
           closeSidebarMobile();
         });
@@ -216,6 +230,98 @@
     }
   }
 
+  function updateNavHighlight(questionId, chapterId) {
+    if (!questionId || !chapterId) return;
+
+    navEl.querySelectorAll('.nav-chapter').forEach(wrap => {
+      const chId = wrap.dataset.chapterId;
+      const isChapter = chId === chapterId;
+      wrap.querySelector('.nav-chapter-btn')?.classList.toggle('active', isChapter);
+      wrap.querySelector('.nav-questions')?.classList.toggle('open', isChapter);
+    });
+
+    navEl.querySelectorAll('.nav-q-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.itemId === questionId);
+    });
+
+    const activeBtn = navEl.querySelector(`.nav-q-btn[data-item-id="${questionId}"]`);
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    const card = document.getElementById(questionId);
+    if (card) {
+      breadcrumb.textContent = card.querySelector('.q-title')?.textContent || '';
+    }
+  }
+
+  function setActiveFromScroll(questionId, chapterId) {
+    if (!questionId || questionId === activeQuestionId) return;
+    activeQuestionId = questionId;
+    activeChapter = chapterId;
+    updateNavHighlight(questionId, chapterId);
+
+    document.querySelectorAll('[data-spy-section]').forEach(el => {
+      el.classList.toggle('spy-active', el.id === questionId);
+    });
+  }
+
+  function findActiveCardOnScroll() {
+    const cards = [...document.querySelectorAll('[data-spy-section]')];
+    if (!cards.length) return null;
+
+    const offset = 140;
+    let active = null;
+
+    for (const card of cards) {
+      const { top, bottom } = card.getBoundingClientRect();
+      if (top <= offset && bottom > offset) {
+        active = card;
+        break;
+      }
+      if (top <= offset) active = card;
+    }
+
+    return active || cards[0];
+  }
+
+  function onScrollSpy() {
+    if (Date.now() < scrollSpyPausedUntil) return;
+    if (searchInput.value.trim()) return;
+
+    const card = findActiveCardOnScroll();
+    if (!card) return;
+
+    const chapterId = card.closest('.chapter-section')?.id;
+    if (chapterId) setActiveFromScroll(card.id, chapterId);
+  }
+
+  function setupScrollSpy() {
+    onScrollSpy();
+  }
+
+  function initScrollSpy() {
+    if (scrollSpyBound) return;
+    scrollSpyBound = true;
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        onScrollSpy();
+        ticking = false;
+      });
+    }, { passive: true });
+  }
+
+  function refreshView(filter = '') {
+    renderNav(filter);
+    renderContent(filter);
+    hero.style.display = filter ? 'none' : '';
+    setTimeout(setupScrollSpy, 100);
+  }
+
   function scrollToChapter(id) {
     const el = document.getElementById(id);
     if (el) {
@@ -231,10 +337,17 @@
       ? el
       : el.closest('.question-card, .example-card');
     if (!card) return;
+
+    const chapterId = card.closest('.chapter-section')?.id;
+    if (chapterId) {
+      activeQuestionId = id;
+      activeChapter = chapterId;
+      updateNavHighlight(id, chapterId);
+    }
+
     card.classList.add('open', 'highlight');
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setTimeout(() => card.classList.remove('highlight'), 2000);
-    breadcrumb.textContent = card.querySelector('.q-title')?.textContent || '';
   }
 
   function setAllCards(open) {
@@ -249,10 +362,7 @@
   }
 
   searchInput.addEventListener('input', e => {
-    const val = e.target.value;
-    renderNav(val);
-    renderContent(val);
-    hero.style.display = val ? 'none' : '';
+    refreshView(e.target.value);
   });
 
   expandAll.addEventListener('click', () => setAllCards(true));
@@ -276,10 +386,11 @@
     if (hash) scrollToQuestion(hash);
   });
 
-  renderNav();
-  renderContent();
+  initScrollSpy();
+  refreshView();
 
   if (location.hash) {
+    pauseScrollSpy(1200);
     setTimeout(() => scrollToQuestion(location.hash.slice(1)), 300);
   }
 })();
