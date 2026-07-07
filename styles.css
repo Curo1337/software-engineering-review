@@ -25,6 +25,10 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+[hidden] {
+  display: none !important;
+}
+
 *, *::before, *::after,
 button, input, textarea, select,
 h1, h2, h3, h4, h5, h6,
@@ -1384,6 +1388,17 @@ body.has-custom-bg .music-player {
   margin: 0 auto;
 }
 
+.music-qr-canvas {
+  width: 200px;
+  height: 200px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  display: block;
+  margin: 0 auto;
+}
+
+.music-qr-canvas[hidden],
 .music-qr-img[hidden] {
   display: none !important;
 }

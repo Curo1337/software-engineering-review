@@ -186,8 +186,7 @@
     </div>
     <div class="music-player-controls">
       <button type="button" class="music-ctrl-btn" id="musicPrev" title="上一首">⏮</button>
-      <button type="button" class="music-ctrl-btn music-ctrl-main" id="musicPlayBtn" title="播放">▶</button>
-      <button type="button" class="music-ctrl-btn music-ctrl-main music-ctrl-pause" id="musicPauseBtn" title="暂停" hidden>⏸</button>
+      <button type="button" class="music-ctrl-btn music-ctrl-main" id="musicToggleBtn" title="播放/暂停">▶</button>
       <button type="button" class="music-ctrl-btn" id="musicNext" title="下一首">⏭</button>
       <button type="button" class="music-ctrl-btn" id="musicOpenPanel" title="打开音乐库">🎶</button>
       <input type="range" class="music-volume" id="musicVolume" min="0" max="100" value="75" aria-label="音量">
@@ -235,8 +234,9 @@
           <div class="music-login-card" id="musicLoginCard">
             <p class="music-login-status" id="musicLoginStatus">未登录 · VIP 歌曲需登录后播放</p>
             <div class="music-qr-wrap" id="musicQrWrap">
-              <img class="music-qr-img" id="musicQrImage" alt="网易云登录二维码">
-              <div class="music-qr-placeholder" id="musicQrPlaceholder">正在准备二维码…</div>
+              <canvas class="music-qr-canvas" id="musicQrCanvas" width="200" height="200" hidden></canvas>
+              <img class="music-qr-img" id="musicQrImage" alt="网易云登录二维码" hidden>
+              <div class="music-qr-placeholder" id="musicQrPlaceholder">切换到本页后将自动加载二维码</div>
               <p class="music-qr-tip" id="musicQrTip">请使用 <strong>网易云音乐 App</strong> 扫码登录</p>
               <p class="music-qr-link-wrap" id="musicQrLinkWrap" hidden>
                 手机打不开二维码？<a id="musicQrLink" href="#" target="_blank" rel="noopener">点此在浏览器打开登录页</a>
@@ -307,6 +307,7 @@
   <script src="examples.js"></script>
   <script src="memos.js"></script>
   <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script src="bg.js"></script>
   <script src="brand.js"></script>
   <script src="music.js"></script>

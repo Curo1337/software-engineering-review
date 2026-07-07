@@ -14,7 +14,6 @@
   let settings = { ...defaults };
   let queue = [];
   let queueIndex = -1;
-  let isPlaying = false;
   let isSeeking = false;
   let hasLoadedTrack = false;
   let qrPollTimer = null;
@@ -42,6 +41,25 @@
     return !!settings.neteaseCookie;
   }
 
+  function isAudioPlaying() {
+    return !!audio.src && !audio.paused && !audio.ended;
+  }
+
+  function getApiIssue() {
+    const base = getApiBase();
+    const pageHttps = location.protocol === 'https:';
+    const apiHttp = base.startsWith('http://');
+    const apiLocal = /localhost|127\.0\.0\.1/i.test(base);
+
+    if (pageHttps && apiHttp) {
+      if (apiLocal) {
+        return '当前是 HTTPS 网页，无法访问本机 API。请把 API 部署到 Vercel（HTTPS），在「设置」填入地址。';
+      }
+      return '网页是 HTTPS，API 是 HTTP，浏览器会拦截。请使用 HTTPS 的 API 地址。';
+    }
+    return '';
+  }
+
   function formatArtists(song) {
     const list = song.ar || song.artists || [];
     return list.map(a => a.name).join(' / ') || '未知歌手';
@@ -59,17 +77,22 @@
     el.classList.toggle('music-status-error', !!isError);
   }
 
-  function buildApiParams(params = {}) {
+  function buildApiParams(params = {}, options = {}) {
     const merged = { ...params, timestamp: Date.now() };
-    if (settings.neteaseCookie) {
+    if (settings.neteaseCookie && options.withCookie !== false) {
       merged.cookie = settings.neteaseCookie;
     }
     return merged;
   }
 
   async function neteaseApi(path, params = {}, options = {}) {
+    const apiIssue = getApiIssue();
+    if (apiIssue && !options.ignoreApiIssue) {
+      throw new Error(apiIssue);
+    }
+
     const url = new URL(getApiBase() + path);
-    Object.entries(buildApiParams(params)).forEach(([k, v]) => {
+    Object.entries(buildApiParams(params, options)).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== '') {
         url.searchParams.set(k, String(v));
       }
@@ -79,7 +102,8 @@
     try {
       res = await fetch(url.toString());
     } catch (_) {
-      throw new Error('无法连接网易云 API，请先启动 API 服务并检查地址');
+      const hint = getApiIssue() || '无法连接网易云 API，请启动 API 并在「设置」检查地址';
+      throw new Error(hint);
     }
 
     if (!res.ok) throw new Error(`API 请求失败 (${res.status})`);
@@ -93,6 +117,11 @@
   }
 
   async function testApiConnection() {
+    const issue = getApiIssue();
+    if (issue) {
+      setStatus(issue, true);
+      return false;
+    }
     setStatus('正在测试 API 连接…');
     try {
       await neteaseApi('/search', { keywords: '软件工程', limit: 1 });
@@ -132,28 +161,63 @@
     if (hasLogin()) {
       throw lastError || new Error('该歌曲暂无法播放，请确认账号有相应 VIP 权限');
     }
-    throw new Error('该歌曲无法播放，请登录网易云账号后再试（VIP 歌曲需要登录）');
+    throw new Error('该歌曲无法播放，请切换到「扫码登录」登录网易云账号');
   }
 
-  function showQrImage(src) {
+  function hideAllQrViews(message) {
     const qrImage = $('musicQrImage');
+    const qrCanvas = $('musicQrCanvas');
     const qrPlaceholder = $('musicQrPlaceholder');
-    if (!qrImage) return;
-    qrImage.src = src;
-    qrImage.hidden = false;
-    if (qrPlaceholder) qrPlaceholder.hidden = true;
-  }
 
-  function hideQrImage(message) {
-    const qrImage = $('musicQrImage');
-    const qrPlaceholder = $('musicQrPlaceholder');
     if (qrImage) {
       qrImage.hidden = true;
       qrImage.removeAttribute('src');
     }
+    if (qrCanvas) qrCanvas.hidden = true;
     if (qrPlaceholder) {
       qrPlaceholder.hidden = false;
       qrPlaceholder.textContent = message || '二维码加载失败';
+    }
+  }
+
+  function showQrPlaceholder(message) {
+    hideAllQrViews(message);
+  }
+
+  function showQrImage(src) {
+    const qrImage = $('musicQrImage');
+    const qrCanvas = $('musicQrCanvas');
+    const qrPlaceholder = $('musicQrPlaceholder');
+    if (!qrImage) return;
+
+    qrImage.onerror = () => {
+      qrImage.hidden = true;
+      showQrPlaceholder('二维码图片加载失败，请点击刷新');
+    };
+
+    qrImage.src = src;
+    qrImage.hidden = false;
+    if (qrCanvas) qrCanvas.hidden = true;
+    if (qrPlaceholder) qrPlaceholder.hidden = true;
+  }
+
+  async function showQrCanvas(qrurl) {
+    const qrCanvas = $('musicQrCanvas');
+    const qrImage = $('musicQrImage');
+    const qrPlaceholder = $('musicQrPlaceholder');
+
+    if (!qrCanvas || !qrurl || typeof window.QRCode === 'undefined') {
+      return false;
+    }
+
+    try {
+      await window.QRCode.toCanvas(qrCanvas, qrurl, { width: 200, margin: 1 });
+      qrCanvas.hidden = false;
+      if (qrImage) qrImage.hidden = true;
+      if (qrPlaceholder) qrPlaceholder.hidden = true;
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -170,15 +234,12 @@
     if (wrap) wrap.hidden = true;
   }
 
-  function buildQrImageSrc(qrimg, qrurl) {
-    if (qrimg) {
-      if (qrimg.startsWith('data:') || qrimg.startsWith('http')) return qrimg;
-      return `data:image/png;base64,${qrimg}`;
-    }
-    if (qrurl) {
-      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(qrurl)}`;
-    }
-    return '';
+  function buildQrImageSrc(qrimg) {
+    if (!qrimg) return '';
+    const text = String(qrimg).trim();
+    if (text.startsWith('data:image')) return text;
+    if (text.startsWith('http')) return text;
+    return `data:image/png;base64,${text.replace(/^data:image\/\w+;base64,/, '')}`;
   }
 
   function updateLoginUI(profile) {
@@ -240,16 +301,38 @@
     if (tip) tip.innerHTML = text;
   }
 
+  async function renderQrCode(qrimg, qrurl) {
+    const imageSrc = buildQrImageSrc(qrimg);
+    if (imageSrc) {
+      showQrImage(imageSrc);
+      return true;
+    }
+    if (await showQrCanvas(qrurl)) return true;
+    if (qrurl) {
+      showQrImage(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(qrurl)}`);
+      return true;
+    }
+    return false;
+  }
+
   async function startQrLogin() {
     if (hasLogin()) {
       await refreshLoginStatus();
       return;
     }
 
+    const apiIssue = getApiIssue();
+    if (apiIssue) {
+      showQrPlaceholder('请先配置可用的 API 地址');
+      setQrTip(apiIssue);
+      setStatus(apiIssue, true);
+      return;
+    }
+
     stopQrPolling();
     clearQrLink();
-    hideQrImage('正在获取二维码…');
-    setQrTip('正在连接 API 并生成二维码…');
+    showQrPlaceholder('正在获取二维码…');
+    setQrTip('正在连接 API…');
     setStatus('正在生成登录二维码…');
 
     const qrStart = $('musicQrStart');
@@ -259,26 +342,26 @@
     }
 
     try {
-      const keyData = await neteaseApi('/login/qr/key');
+      const keyData = await neteaseApi('/login/qr/key', {}, { withCookie: false });
       qrUnikey = keyData.data?.unikey || keyData.unikey;
       if (!qrUnikey) throw new Error('无法获取二维码 key');
 
-      const qrData = await neteaseApi('/login/qr/create', { key: qrUnikey, qrimg: 1 });
+      const qrData = await neteaseApi('/login/qr/create', { key: qrUnikey, qrimg: 1 }, { withCookie: false });
       const qrimg = qrData.data?.qrimg || qrData.qrimg;
       const qrurl = qrData.data?.qrurl || qrData.qrurl;
-      const imageSrc = buildQrImageSrc(qrimg, qrurl);
 
-      if (!imageSrc) throw new Error('API 未返回二维码，请确认 NeteaseCloudMusicApi 已启动');
+      const rendered = await renderQrCode(qrimg, qrurl);
+      if (!rendered) throw new Error('API 未返回二维码，请确认 NeteaseCloudMusicApi 已启动');
 
-      showQrImage(imageSrc);
       if (qrurl) setQrLink(qrurl);
 
-      setQrTip('请打开 <strong>网易云音乐 App</strong> → 左上角菜单 → 扫一扫');
+      setQrTip('请打开 <strong>网易云音乐 App</strong> → 扫一扫');
       setStatus('二维码已就绪，请扫码登录');
 
       qrPollTimer = setInterval(async () => {
         try {
           const check = await neteaseApi('/login/qr/check', { key: qrUnikey, noCookie: true }, {
+            withCookie: false,
             allowedCodes: [800, 801, 802, 803]
           });
 
@@ -296,19 +379,19 @@
             setQrTip('登录成功，现在可以播放 VIP 歌曲了');
           } else if (check.code === 800) {
             stopQrPolling();
-            hideQrImage('二维码已过期');
+            showQrPlaceholder('二维码已过期');
             setQrTip('二维码已过期，请点击「刷新二维码」');
             setStatus('二维码已过期，请刷新', true);
           }
         } catch (err) {
           stopQrPolling();
-          hideQrImage('扫码检测失败');
+          showQrPlaceholder('扫码检测失败');
           setStatus(err.message, true);
         }
       }, 2000);
     } catch (err) {
-      hideQrImage('获取二维码失败');
-      setQrTip('请先在「设置」中配置 API 地址，并双击 <code>start-music-api.bat</code> 启动服务');
+      showQrPlaceholder('获取二维码失败');
+      setQrTip('本地请运行 <code>start-music-api.bat</code>；在线网页需配置 HTTPS 的 API');
       setStatus(err.message, true);
     } finally {
       if (qrStart) {
@@ -321,24 +404,16 @@
   async function logoutNetease() {
     stopQrPolling();
     try {
-      if (settings.neteaseCookie) {
-        await neteaseApi('/logout');
-      }
+      if (settings.neteaseCookie) await neteaseApi('/logout');
     } catch (_) { /* ignore */ }
 
     settings.neteaseCookie = '';
     settings.loginNickname = '';
     saveSettings();
     updateLoginUI(null);
+    showQrPlaceholder('已退出，点击刷新二维码重新登录');
     setStatus('已退出网易云登录');
-
-    const qrImage = $('musicQrImage');
-    const qrPlaceholder = $('musicQrPlaceholder');
-    if (qrImage) {
-      qrImage.hidden = true;
-      qrImage.removeAttribute('src');
-    }
-    if (qrPlaceholder) qrPlaceholder.hidden = false;
+    clearQrLink();
     setQrTip('请使用 <strong>网易云音乐 App</strong> 扫码登录');
   }
 
@@ -366,7 +441,7 @@
       btn.addEventListener('click', () => {
         const id = Number(btn.dataset.id);
         const song = songs.find(s => s.id === id);
-        if (song) playFromQueue([song], 0, true);
+        if (song) playFromQueue([song], 0);
       });
     });
   }
@@ -384,10 +459,10 @@
   function updatePlayStateLabel() {
     const state = $('musicPlayState');
     if (!state) return;
-    if (!hasLoadedTrack) {
+    if (!hasLoadedTrack || !audio.src) {
       state.textContent = '待机';
       state.className = 'music-player-state';
-    } else if (isPlaying) {
+    } else if (isAudioPlaying()) {
       state.textContent = '播放中';
       state.className = 'music-player-state is-playing';
     } else {
@@ -396,13 +471,32 @@
     }
   }
 
-  function updatePlayButtons() {
-    const playBtn = $('musicPlayBtn');
-    const pauseBtn = $('musicPauseBtn');
+  function updateToggleButton() {
+    const btn = $('musicToggleBtn');
     const canControl = hasLoadedTrack && !!audio.src;
+    if (!btn) return;
 
-    if (playBtn) playBtn.hidden = isPlaying && canControl;
-    if (pauseBtn) pauseBtn.hidden = !isPlaying || !canControl;
+    if (!canControl) {
+      btn.textContent = '▶';
+      btn.title = '播放';
+      btn.setAttribute('aria-label', '播放');
+      return;
+    }
+
+    if (isAudioPlaying()) {
+      btn.textContent = '⏸';
+      btn.title = '暂停';
+      btn.setAttribute('aria-label', '暂停');
+    } else {
+      btn.textContent = '▶';
+      btn.title = '继续播放';
+      btn.setAttribute('aria-label', '继续播放');
+    }
+  }
+
+  function syncPlayerControls() {
+    updatePlayStateLabel();
+    updateToggleButton();
   }
 
   function updatePlayerUI(song) {
@@ -418,8 +512,7 @@
       if (fallback) fallback.hidden = false;
       hasLoadedTrack = false;
       setPlayerVisible(false);
-      updatePlayStateLabel();
-      updatePlayButtons();
+      syncPlayerControls();
       return;
     }
 
@@ -440,11 +533,10 @@
       }
     }
 
-    updatePlayStateLabel();
-    updatePlayButtons();
+    syncPlayerControls();
   }
 
-  async function playFromQueue(newQueue, index, replace) {
+  async function playFromQueue(newQueue, index) {
     queue = newQueue.slice();
     queueIndex = index;
     await playCurrent();
@@ -462,14 +554,10 @@
       audio.src = url;
       audio.volume = settings.volume;
       await audio.play();
-      isPlaying = true;
-      updatePlayButtons();
-      updatePlayStateLabel();
+      syncPlayerControls();
       setStatus(`正在播放：${song.name}${hasLogin() ? '' : '（未登录，VIP 歌曲可能无法播放）'}`);
     } catch (err) {
-      isPlaying = false;
-      updatePlayButtons();
-      updatePlayStateLabel();
+      syncPlayerControls();
       setStatus(err.message, true);
       if (!hasLogin() && /登录|VIP/i.test(err.message)) {
         setTimeout(() => openMusicPanel('account'), 500);
@@ -496,9 +584,7 @@
   function pauseMusic() {
     if (!audio.src) return;
     audio.pause();
-    isPlaying = false;
-    updatePlayButtons();
-    updatePlayStateLabel();
+    syncPlayerControls();
     const song = queue[queueIndex];
     setStatus(song ? `已暂停：${song.name}` : '已暂停');
   }
@@ -509,16 +595,18 @@
       return;
     }
     audio.play().then(() => {
-      isPlaying = true;
-      updatePlayButtons();
-      updatePlayStateLabel();
+      syncPlayerControls();
       const song = queue[queueIndex];
       setStatus(song ? `正在播放：${song.name}` : '正在播放');
     }).catch(err => setStatus(err.message, true));
   }
 
   function togglePlayPause() {
-    if (isPlaying) pauseMusic();
+    if (!audio.src) {
+      openMusicPanel('search');
+      return;
+    }
+    if (isAudioPlaying()) pauseMusic();
     else resumeMusic();
   }
 
@@ -586,7 +674,7 @@
     try {
       const tracks = await getPlaylistTracks(id);
       if (!tracks.length) throw new Error('歌单为空或无法访问');
-      await playFromQueue(tracks, 0, true);
+      await playFromQueue(tracks, 0);
       renderSearchResults(tracks);
       switchTab('search');
       setStatus(`已加载歌单，共 ${tracks.length} 首`);
@@ -623,8 +711,7 @@
     $('musicApiSave')?.addEventListener('click', handleSaveApi);
     $('musicApiTest')?.addEventListener('click', testApiConnection);
 
-    $('musicPlayBtn')?.addEventListener('click', resumeMusic);
-    $('musicPauseBtn')?.addEventListener('click', pauseMusic);
+    $('musicToggleBtn')?.addEventListener('click', togglePlayPause);
     $('musicNext')?.addEventListener('click', playNext);
     $('musicPrev')?.addEventListener('click', playPrev);
 
@@ -670,20 +757,9 @@
       progress.value = String((audio.currentTime / audio.duration) * 100);
     });
 
-    audio.addEventListener('play', () => {
-      isPlaying = true;
-      updatePlayButtons();
-      updatePlayStateLabel();
-    });
-
-    audio.addEventListener('pause', () => {
-      isPlaying = false;
-      updatePlayButtons();
-      updatePlayStateLabel();
-    });
-
+    audio.addEventListener('play', syncPlayerControls);
+    audio.addEventListener('pause', syncPlayerControls);
     audio.addEventListener('ended', playNext);
-
     audio.addEventListener('error', () => {
       setStatus('播放出错，尝试下一首…', true);
       setTimeout(playNext, 800);
@@ -701,11 +777,11 @@
 
     bindEvents();
     syncPanelSettings();
+    hideAllQrViews('切换到本页后将自动加载二维码');
     updateLoginUI(settings.loginNickname ? { nickname: settings.loginNickname } : null);
     await refreshLoginStatus();
     await testApiConnection();
-    updatePlayButtons();
-    updatePlayStateLabel();
+    syncPlayerControls();
   }
 
   if (document.readyState === 'loading') {
