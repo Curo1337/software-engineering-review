@@ -1676,11 +1676,65 @@ body.has-custom-bg .music-player {
   z-index: 1;
   max-width: 960px;
   margin: 0 auto;
-  padding: 48px 24px 64px;
+  padding: 32px 24px 64px;
   min-height: 100vh;
+}
+
+.home-subject-nav {
   display: flex;
-  flex-direction: column;
   justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.home-nav-link,
+.subject-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.home-nav-link:hover,
+.subject-nav-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.home-nav-link.active,
+.subject-nav-link.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.home-section-title {
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.subject-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.topbar .breadcrumb {
+  min-width: 0;
 }
 
 .home-header {
@@ -1806,16 +1860,38 @@ body.has-custom-bg .music-player {
   width: 100%;
 }
 
+@media (max-width: 900px) {
+  .subject-nav-link {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
 @media (max-width: 640px) {
   .subject-grid {
     grid-template-columns: 1fr;
   }
 
   .home-main {
-    padding: 32px 16px 48px;
+    padding: 24px 16px 48px;
   }
 
   .home-header h1 {
     font-size: 1.6rem;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .subject-nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .breadcrumb {
+    flex: 1 1 auto;
   }
 }
