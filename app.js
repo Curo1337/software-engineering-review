@@ -369,7 +369,7 @@
   collapseAll.addEventListener('click', () => setAllCards(false));
 
   toggleExamMode.addEventListener('click', () => {
-    examOverview.scrollIntoView({ behavior: 'smooth' });
+    if (examOverview) examOverview.scrollIntoView({ behavior: 'smooth' });
     const examSection = document.getElementById('exam');
     if (examSection) scrollToChapter('exam');
   });

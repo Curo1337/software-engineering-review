@@ -1,8 +1,9 @@
 (function () {
-  const STORAGE_KEY = 'se-review-brand-settings';
-  const DEFAULT_TITLE = '软件工程总复习';
-  const DEFAULT_SUBTITLE = '2026 详细解析版';
-  const DEFAULT_PAGE_TITLE = '2026 软件工程总复习 · 详细解析';
+  const meta = window.SUBJECT_META || {};
+  const STORAGE_KEY = (meta.storageKey || 'se-review') + '-brand-settings';
+  const DEFAULT_TITLE = meta.defaultBrandTitle || '软件工程总复习';
+  const DEFAULT_SUBTITLE = meta.defaultBrandSubtitle || '2026 详细解析版';
+  const DEFAULT_PAGE_TITLE = meta.defaultPageTitle || '2026 软件工程总复习 · 详细解析';
 
   const defaults = {
     title: DEFAULT_TITLE,

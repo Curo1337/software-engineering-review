@@ -1,8 +1,9 @@
 (function () {
-  const STORAGE_KEY = 'se-review-avatar-settings';
-  const DB_NAME = 'se-review-avatar';
+  const meta = window.SUBJECT_META || {};
+  const STORAGE_KEY = (meta.storageKey || 'se-review') + '-avatar-settings';
+  const DB_NAME = (meta.storageKey || 'se-review') + '-avatar';
   const DB_STORE = 'images';
-  const DEFAULT_EMOJI = '📘';
+  const DEFAULT_EMOJI = meta.defaultAvatar || '📘';
 
   const defaults = {
     avatarUrl: '',
