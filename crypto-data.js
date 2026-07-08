@@ -28,6 +28,19 @@ const REVIEW_DATA = [
             <tr><td>密钥管理</td><td>困难（需安全通道分发）</td><td>公钥可公开</td></tr>
             <tr><td>典型用途</td><td>大量数据加密</td><td>密钥交换、数字签名</td></tr>
           </table>
+          <h4>📊 工作流程对比</h4>
+          <div class="example-box"><pre>
+对称密码（Alice → Bob，共享密钥 K）
+  Alice:  明文 m ──E(K)──→ 密文 c ──发送──→ Bob
+  Bob:    密文 c ──D(K)──→ 明文 m
+          ↑ 双方必须事先安全地共享同一密钥 K
+
+非对称密码（Bob 的公钥加密）
+  Bob 公开 pk，保密 sk
+  Alice:  明文 m ──E(pk)──→ 密文 c ──发送──→ Bob
+  Bob:    密文 c ──D(sk)──→ 明文 m
+          ↑ 只有 Bob 的私钥 sk 能解密
+          </pre></div>
         `
       },
       {
@@ -83,6 +96,21 @@ const REVIEW_DATA = [
             <li><strong>单表代替密码</strong>：整个明文使用同一张替换表</li>
             <li><strong>多表代换密码</strong>：不同位置使用不同替换表（如 Vigenère 密码），安全性更高</li>
           </ul>
+          <h4>📊 图解：置换 vs 代替</h4>
+          <div class="example-box"><pre>
+明文:  H E L L O
+
+【置换密码】字母不变，位置打乱（易位）
+密文:  L L E O H     ← 重新排列
+
+【单表代替】字母替换，位置不变
+明文:  H E L L O
+         ↓ ↓ ↓ ↓ ↓  （按密钥 K 映射）
+密文:  K H O O R     ← 每个字母换成另一个
+
+【多表代替】不同位置用不同替换表
+第1位用表1，第2位用表2… 比单表更难被统计分析攻破
+          </pre></div>
         `
       },
       {
@@ -113,6 +141,15 @@ const REVIEW_DATA = [
         tags: ["基础概念"],
         content: `
           <p><strong>流密码</strong>（序列密码）将明文按<strong>比特或字节</strong>逐位加密，通常用密钥流发生器产生与明文等长的密钥流，再与明文做异或运算得到密文。</p>
+          <h4>📊 流密码工作原理</h4>
+          <div class="example-box"><pre>
+密钥 K → [密钥流发生器] → z₁ z₂ z₃ z₄ …（密钥流）
+明文   m₁ m₂ m₃ m₄ …
+         ⊕  ⊕  ⊕  ⊕   （逐位异或）
+密文   c₁ c₂ c₃ c₄ …
+
+特点：来一位处理一位，延迟低，适合实时通信（如 GSM、WiFi）
+          </pre></div>
           <h4>与分组密码的对比</h4>
           <table class="compare-table">
             <tr><th>对比项</th><th>流密码</th><th>分组密码</th></tr>
@@ -142,6 +179,27 @@ const REVIEW_DATA = [
             <li><strong>多轮迭代</strong>：重复「轮函数 + 子密钥混合」，增强安全性</li>
           </ol>
           <p>典型代表：<strong>DES</strong> 采用 Feistel 结构（可视为 SP 网络的变体），<strong>AES</strong> 采用代换-置换结构。</p>
+          <h4>📊 Feistel 结构（DES 采用）</h4>
+          <div class="example-box"><pre>
+明文分组 (L₀, R₀)
+    ┌──────────────────────────────────────┐
+    │  第 i 轮                              │
+    │  Lᵢ ─────────────────────→ ⊕ ─→ Lᵢ₊₁ │
+    │           ↑                │         │
+    │  Rᵢ ─→ F(·,Kᵢ) ─→─────────┘   → Rᵢ₊₁ │
+    │         轮函数                      │
+    └──────────────────────────────────────┘
+    重复 n 轮 → 输出密文分组
+
+关键：F 函数 + 子密钥 Kᵢ 多轮迭代，实现混淆与扩散
+          </pre></div>
+          <h4>📊 SP 网络（AES 采用）</h4>
+          <div class="example-box"><pre>
+明文 → [S盒代换] → [P盒置换] → ⊕子密钥 → … → 多轮 → 密文
+         混淆         扩散
+
+S 盒：非线性替换    P 盒：比特位置打乱，扩大影响范围
+          </pre></div>
         `
       },
       {
@@ -164,6 +222,32 @@ const REVIEW_DATA = [
             <tr><td>速度</td><td>加密解密应足够快</td></tr>
             <tr><td>灵活性</td><td>支持在多平台和多处理器上实现</td></tr>
           </table>
+        `
+      },
+      {
+        id: "3-3",
+        title: "迭代轮数与密钥扩展算法",
+        tags: ["简答", "补充"],
+        content: `
+          <p>复习概要中与设计准则并列、但需单独掌握的两个要点：</p>
+          <h4>迭代轮数</h4>
+          <ul>
+            <li>轮数越多，密码通常越安全（攻击者需破解更多轮的非线性变换）</li>
+            <li>但轮数增加会降低加解密<strong>速度</strong></li>
+            <li>需在<strong>安全性</strong>与<strong>效率</strong>之间权衡（如 DES 16 轮、AES 10/12/14 轮）</li>
+          </ul>
+          <h4>密钥扩展算法（Key Schedule）</h4>
+          <p>将用户输入的<strong>主密钥</strong>扩展/generate 出各轮所需的<strong>子密钥</strong> K₁, K₂, …, K<sub>n</sub>。</p>
+          <div class="example-box"><pre>
+主密钥 K（如 128 bit）
+        ↓
+  [密钥扩展算法]
+        ↓
+子密钥: K₁  K₂  K₃  …  K₁₆  → 分别送入各轮轮函数
+
+要求：子密钥之间关联不能太简单，否则主密钥易被反推
+          </pre></div>
+          <div class="tip-box"><strong>简答模板：</strong>迭代轮数影响安全与速度；密钥扩展算法负责从主密钥派生各轮子密钥，其设计影响整体安全强度。</div>
         `
       }
     ]
@@ -210,6 +294,21 @@ const REVIEW_DATA = [
             <li>消息由用户自己的<strong>秘密钥</strong>加密 → 消息<strong>不能被他人篡改</strong>，但<strong>能被他人窃听</strong>（任何人都能用公开钥解密）</li>
             <li>为同时提供<strong>认证</strong>和<strong>保密性</strong>，可使用<strong>双重加、解密</strong></li>
           </ul>
+          <h4>📊 双重加解密流程</h4>
+          <div class="example-box"><pre>
+发送方 A                                    接收方 B
+  明文 m
+    ↓
+  用 A 的私钥签名 → sig        （认证：证明是 A 发的）
+    ↓
+  用 B 的公钥加密 → c          （保密：只有 B 能解密）
+    ↓
+  发送 c ──────────────────────→  用 B 的私钥解密 → m + sig
+                                      用 A 的公钥验签 → 确认来源
+
+若只用私钥加密（签名）：可认证但任何人都能用公钥"解密"看到内容
+双重操作 = 先认证 + 后保密
+          </pre></div>
         `
       },
       {
@@ -225,6 +324,25 @@ const REVIEW_DATA = [
             <li><strong>公钥</strong>：(n, e)；<strong>私钥</strong>：(n, d)</li>
             <li>加密：c = m<sup>e</sup> mod n；解密：m = c<sup>d</sup> mod n</li>
           </ol>
+          <h4>📊 RSA 密钥关系图</h4>
+          <div class="example-box"><pre>
+        p, q（大素数，保密）
+              ↓
+    n = p×q（公开）    φ(n) = (p-1)(q-1)（保密）
+              ↓
+    选 e：gcd(e, φ)=1  →  求 d：e×d ≡ 1 (mod φ)
+              ↓                    ↓
+    公钥 (n, e) 公开        私钥 (n, d) 保密
+
+加密/验签用 e    解密/签名用 d
+          </pre></div>
+          <h4>模幂运算：平方-乘算法</h4>
+          <p>计算 a<sup>b</sup> mod n 时，将 b 写成二进制，逐位平方并累乘，避免直接算大幂次。</p>
+          <div class="example-box"><pre>
+例：5⁷ mod 33，7 = 111₂ = 4+2+1
+  5¹=5,  5²=25,  5⁴=25² mod 33 = 625 mod 33 = 16
+  5⁷ = 5⁴ × 5² × 5¹ = 16 × 25 × 5 mod 33 = 14
+          </pre></div>
           <h4>安全性基础</h4>
           <p>基于<strong>大整数分解困难性</strong>：已知 n 难以分解出 p、q，从而难以求出 φ(n) 和 d。</p>
           <div class="warn-box">⚠️ 考试计算题注意：模幂运算可用平方-乘算法；选 e 常取 65537 或 3。</div>
@@ -255,6 +373,13 @@ const REVIEW_DATA = [
             <tr><td>消息认证码 MAC</td><td>对信源消息的一个<strong>编码函数</strong>，使用密钥</td></tr>
             <tr><td>散列函数 Hash</td><td>公开函数，将任意长信息映射成<strong>固定长度</strong>的信息</td></tr>
           </table>
+          <h4>认证函数的三个层次（复习概要补充）</h4>
+          <table class="compare-table">
+            <tr><th>层次</th><th>含义</th></tr>
+            <tr><td>认证标识</td><td>Authentication Identification — 产生一个标识信息真实性的标记</td></tr>
+            <tr><td>认证协议</td><td>Authentication Protocol — 规定双方如何交换消息、完成认证</td></tr>
+            <tr><td>消息认证</td><td>Authentication — 接收者执行验证，确认消息真实且完整</td></tr>
+          </table>
         `
       },
       {
@@ -263,7 +388,17 @@ const REVIEW_DATA = [
         tags: ["重点", "常考"],
         content: `
           <p>使用密钥产生短小的定长数据分组，即<strong>密码校验 MAC</strong>，附加在报文中。</p>
-          <h4>工作流程</h4>
+          <h4>📊 MAC 工作流程</h4>
+          <div class="example-box"><pre>
+发送方 A                          接收方 B
+  消息 m                            消息 m
+    ↓                                 ↓
+MAC=C(k,m) ──附在报文后──→ 发送 m‖MAC ──→ 重算 MAC'=C(k,m)
+                                              ↓
+                                         MAC' = MAC ?
+                                         是 → 未篡改 + 来自共享密钥持有者
+          </pre></div>
+          <h4>工作流程（文字版）</h4>
           <ol>
             <li>通信双方共享密钥 k</li>
             <li>发送方计算 MAC = C(k, m) 并附在报文后</li>
@@ -331,7 +466,13 @@ const REVIEW_DATA = [
         title: "哈希函数应用：Alice 与 Bob 的两种通信方案",
         tags: ["应用", "简答"],
         content: `
-          <h4>方案一：加密消息 + 哈希值（Ek(M|H(M))）</h4>
+          <h4>方案一：加密消息 + 哈希值（E<sub>k</sub>(M|H(M))）</h4>
+          <div class="example-box"><pre>
+Alice                                    Bob
+  M ──H()──→ H(M)
+  M|H(M) ──E(Bob公钥)──→ 密文 ──发送──→ D(Bob私钥) → M, H(M)
+  M ──H()──→ H(M)'  比较 H(M)' = H(M) ?  → 完整性 ✓ + 保密 ✓
+          </pre></div>
           <ol>
             <li>Alice 用哈希函数 H 对消息 M 生成 H(M)</li>
             <li>Alice 用 Bob 的公钥加密 M 和 H(M) 的拼接：E<sub>k</sub>(M|H(M))</li>
@@ -339,6 +480,12 @@ const REVIEW_DATA = [
             <li>Bob 对 M 重新计算哈希，与 H(M) 比较 → 验证<strong>完整性</strong>和<strong>来源</strong></li>
           </ol>
           <h4>方案二：明文传输 + 加密哈希值（M + E<sub>k</sub>(H(M))）</h4>
+          <div class="example-box"><pre>
+Alice                                    Bob
+  M ──H()──→ H(M) ──E(Bob公钥)──→ E(H(M))
+  发送: M（明文，可被窃听）+ E(H(M))  ──→  D(Bob私钥) → H(M)
+  M ──H()──→ H(M)'  比较 → 完整性 ✓（不提供保密）
+          </pre></div>
           <ol>
             <li>Alice 对 M 计算 H(M)</li>
             <li>Alice 用 Bob 的公钥<strong>只加密哈希值</strong>：E<sub>k</sub>(H(M))</li>
@@ -367,6 +514,14 @@ const REVIEW_DATA = [
             <li><strong>不可否认性</strong>：签名者事后不能否认自己的签名</li>
           </ol>
           <div class="tip-box"><strong>记忆口诀：</strong>「伪认重改否」——不可伪造、认证、不可重用、不可修改、不可否认。</div>
+          <h4>📊 五特性直观理解</h4>
+          <div class="example-box"><pre>
+不可伪造 → 别人不能冒充你签字
+认证性   → 收件人确信是你签的
+不可重用 → 这份签名只能用于这条消息，不能贴到别的消息上
+不可修改 → 签完字后内容不能改（改了验证失败）
+不可否认 → 签完不能抵赖（私钥只有你有）
+          </pre></div>
         `
       },
       {
@@ -374,6 +529,13 @@ const REVIEW_DATA = [
         title: "RSA 数字签名",
         tags: ["重点", "计算题"],
         content: `
+          <h4>📊 加密 vs 签名：密钥用法相反</h4>
+          <div class="example-box"><pre>
+RSA 加密（保密）:  明文 ──公钥 e──→ 密文 ──私钥 d──→ 明文
+RSA 签名（认证）:  哈希 h ──私钥 d──→ 签名 S ──公钥 e──→ 验证 h
+
+口诀：加密用公钥，签名用私钥；解密用私钥，验签用公钥
+          </pre></div>
           <h4>签名过程</h4>
           <ol>
             <li>发送方对消息 M 计算哈希 h = H(M)</li>
@@ -405,7 +567,17 @@ const REVIEW_DATA = [
           </ol>
           <h4>验证</h4>
           <p>验证 g<sup>H(M)</sup> ≡ y<sup>r</sup> · r<sup>s</sup> (mod p) 是否成立。</p>
-          <div class="warn-box">⚠️ ElGamal 签名长度是明文的两倍，且每次签名需选不同的随机 k。</div>
+          <h4>📊 ElGamal 签名流程</h4>
+          <div class="example-box"><pre>
+密钥：素数 p, 本原根 g; 私钥 x, 公钥 y = gˣ mod p
+
+签名:  选随机 k → r = gᵏ mod p
+              s = k⁻¹(H(M) − x·r) mod (p−1)
+              输出 (r, s)
+
+验证:  计算 g^H(M) mod p  是否等于  y^r · r^s mod p
+          </pre></div>
+          <div class="warn-box">⚠️ ElGamal 签名长度是明文的两倍，且每次签名需选不同的随机 k（k 泄露会导致私钥 x 被求出）。</div>
         `
       },
       {

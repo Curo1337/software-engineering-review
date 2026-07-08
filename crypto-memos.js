@@ -32,6 +32,10 @@ const STUDY_MEMOS = {
     plain: "S 盒负责<strong>搞乱</strong>，P 盒负责<strong>扩散</strong>，轮函数要够乱还要够快，还要防差分和线性分析两种数学攻击。",
     memory: "S=<strong>混淆</strong>，P=<strong>雪崩/扩散</strong>，F=<strong>安全+速度+灵活</strong>。"
   },
+  "3-3": {
+    plain: "轮数越多越安全但越慢；密钥扩展就是把一把主钥匙变成很多把轮钥匙，每轮用不同的。",
+    memory: "简答两点：<strong>轮数=安全与速度权衡</strong>；<strong>密钥扩展=主密钥→各轮子密钥</strong>。"
+  },
   "4-1": {
     plain: "对称密码最难两件事：<strong>怎么把钥匙交给对方</strong>和<strong>怎么在电脑上签字</strong>。公钥密码就是为了解决这两个问题发明的。",
     memory: "提出背景：<strong>密钥分配 + 数字签字</strong>。公钥公开，私钥保密。"
