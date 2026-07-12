@@ -1725,7 +1725,7 @@ body.has-custom-bg .music-player {
 
 .subject-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
 }
 
@@ -1753,6 +1753,10 @@ body.has-custom-bg .music-player {
 
 .subject-crypto:hover {
   border-color: #7c3aed;
+}
+
+.subject-netsec:hover {
+  border-color: #059669;
 }
 
 .subject-icon {
@@ -1796,6 +1800,11 @@ body.has-custom-bg .music-player {
   color: #7c3aed;
 }
 
+.subject-netsec .subject-tags li {
+  background: rgba(5, 150, 105, 0.08);
+  color: #059669;
+}
+
 .subject-enter {
   font-size: 0.95rem;
   font-weight: 600;
@@ -1804,6 +1813,16 @@ body.has-custom-bg .music-player {
 
 .subject-crypto .subject-enter {
   color: #7c3aed;
+}
+
+.subject-netsec .subject-enter {
+  color: #059669;
+}
+
+body[data-subject="netsec"] {
+  --accent: #059669;
+  --accent-soft: rgba(5, 150, 105, 0.08);
+  --accent-2: #10b981;
 }
 
 .home-footer {
