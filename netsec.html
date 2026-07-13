@@ -12,10 +12,9 @@
   <div class="app">
     <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <button type="button" class="brand-avatar" id="brandAvatarBtn" title="点击更换头像">
-          <span class="brand-avatar-fallback" id="brandAvatarFallback">🛡️</span>
-          <img class="brand-avatar-img" id="brandAvatarImg" alt="头像" hidden>
-        </button>
+        <span class="brand-avatar" aria-hidden="true">
+          <span class="brand-avatar-fallback">🛡️</span>
+        </span>
         <button type="button" class="brand-text-btn" id="brandTextBtn" title="点击修改名称">
           <h1 id="brandTitle">网络安全总复习</h1>
           <p id="brandSubtitle">课程考核重点 · 详细解析</p>
@@ -36,9 +35,7 @@
         <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">☰</button>
         <div class="breadcrumb" id="breadcrumb">首页</div>
         <div class="topbar-actions">
-          <button id="musicBtn" class="btn-ghost" title="网易云音乐">🎵 音乐</button>
           <button id="brandBtn" class="btn-ghost" title="自定义名称">✏️ 名称</button>
-          <button id="avatarBtn" class="btn-ghost" title="自定义头像">👤 头像</button>
           <button id="bgBtn" class="btn-ghost" title="自定义背景">🖼 背景</button>
           <button id="shareBtn" class="btn-ghost" title="分享链接">🔗 分享</button>
           <button id="expandAll" class="btn-ghost">全部展开</button>
@@ -171,178 +168,20 @@
     </div>
   </div>
 
-  <!-- 底部音乐播放器 -->
-  <div class="music-player" id="musicPlayer">
-    <div class="music-player-cover">
-      <span class="music-player-cover-fallback" id="musicCoverFallback">🎵</span>
-      <img class="music-player-cover-img" id="musicCover" alt="封面" hidden>
-    </div>
-    <div class="music-player-main">
-      <div class="music-player-info">
-        <div class="music-player-title-row">
-          <div class="music-player-title" id="musicTitle">未播放</div>
-          <span class="music-player-state" id="musicPlayState">待机</span>
-        </div>
-        <div class="music-player-artist" id="musicArtist">打开音乐面板搜索或加载歌单</div>
-        <div class="music-player-meta">
-          <span class="music-quality-badge" id="musicQualityBadge" hidden>较高</span>
-          <select class="music-quality-player" id="musicQualityPlayer" title="播放音质" aria-label="播放音质"></select>
-        </div>
-      </div>
-      <div class="music-progress-wrap">
-        <span class="music-time-current" id="musicTimeCurrent">00:00</span>
-        <input type="range" class="music-progress" id="musicProgress" min="0" max="100" value="0" aria-label="播放进度">
-        <span class="music-time-total" id="musicTimeTotal">00:00</span>
-      </div>
-    </div>
-    <div class="music-player-controls">
-      <button type="button" class="music-ctrl-btn" id="musicPrev" title="上一首">⏮</button>
-      <button type="button" class="music-ctrl-btn music-ctrl-main" id="musicToggleBtn" title="播放/暂停">▶</button>
-      <button type="button" class="music-ctrl-btn" id="musicNext" title="下一首">⏭</button>
-      <button type="button" class="music-ctrl-btn" id="musicOpenPanel" title="打开音乐库">🎶</button>
-      <input type="range" class="music-volume" id="musicVolume" min="0" max="100" value="75" aria-label="音量">
-    </div>
-  </div>
-
-  <!-- 音乐面板 -->
-  <div class="modal" id="musicPanel">
-    <div class="modal-box modal-box-music">
-      <div class="modal-header">
-        <h3>🎵 网易云音乐</h3>
-        <button class="modal-close" id="musicClose">×</button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-desc">通过 <strong>NeteaseCloudMusicApi</strong> 连接网易云后端。VIP 歌曲需切换到<strong>「扫码登录」</strong>，用网易云 App 扫码后再播放。</p>
-        <p class="bg-status" id="musicStatus">正在检测 API…</p>
-
-        <div class="music-tabs">
-          <button type="button" class="music-tab active" data-tab="search">搜索</button>
-          <button type="button" class="music-tab" data-tab="playlist">歌单</button>
-          <button type="button" class="music-tab" data-tab="account">扫码登录</button>
-          <button type="button" class="music-tab" data-tab="settings">设置</button>
-        </div>
-
-        <div class="music-tab-panel active" data-panel="search">
-          <div class="input-row music-search-row">
-            <input type="search" id="musicSearchInput" placeholder="搜索歌曲、歌手…" autocomplete="off">
-            <button class="btn-primary" id="musicSearchBtn">搜索</button>
-          </div>
-          <div class="music-results" id="musicResults">
-            <p class="music-empty">输入关键词搜索网易云音乐</p>
-          </div>
-        </div>
-
-        <div class="music-tab-panel" data-panel="playlist">
-          <div class="form-group">
-            <label for="musicPlaylistInput">网易云歌单 ID</label>
-            <input type="text" id="musicPlaylistInput" placeholder="例如 3778678（飙升榜）" autocomplete="off">
-            <p class="music-hint">在歌单分享链接中找到 id，如 music.163.com/#/playlist?id=<strong>3778678</strong></p>
-          </div>
-          <button class="btn-primary brand-apply-btn" id="musicPlaylistLoad">加载并播放歌单</button>
-        </div>
-
-        <div class="music-tab-panel" data-panel="account">
-          <div class="music-login-card" id="musicLoginCard">
-            <p class="music-login-status" id="musicLoginStatus">未登录 · VIP 歌曲需登录后播放</p>
-            <div class="music-qr-wrap" id="musicQrWrap">
-              <canvas class="music-qr-canvas" id="musicQrCanvas" width="200" height="200" hidden></canvas>
-              <img class="music-qr-img" id="musicQrImage" alt="网易云登录二维码" hidden>
-              <div class="music-qr-placeholder" id="musicQrPlaceholder">切换到本页后将自动加载二维码</div>
-              <p class="music-qr-tip" id="musicQrTip">请使用 <strong>网易云音乐 App</strong> 扫码登录</p>
-              <p class="music-qr-link-wrap" id="musicQrLinkWrap" hidden>
-                手机打不开二维码？<a id="musicQrLink" href="#" target="_blank" rel="noopener">点此在浏览器打开登录页</a>
-              </p>
-            </div>
-            <div class="input-row music-login-actions">
-              <button class="btn-primary" id="musicQrStart" type="button">刷新二维码</button>
-              <button class="btn-secondary" id="musicLogout" type="button" hidden>退出登录</button>
-            </div>
-            <p class="music-hint">登录凭证保存在本浏览器，用于获取 VIP 歌曲播放链接。请勿在公共电脑登录。</p>
-          </div>
-        </div>
-
-        <div class="music-tab-panel" data-panel="settings">
-          <div class="music-api-guide">
-            <h4>API 配置方式（任选其一）</h4>
-            <ol class="music-api-steps">
-              <li><strong>最简单（推荐）</strong>：双击项目里的 <code>start-music-tunnel.bat</code>，复制生成的 <code>https://xxx.trycloudflare.com</code> 地址粘贴到下方</li>
-              <li><strong>纯本地</strong>：双击 <code>start-music-api.bat</code>，地址填 <code>http://127.0.0.1:3000</code>（仅本机打开网站时有效）</li>
-              <li><strong>Render 部署</strong>：登录 <a href="https://render.com" target="_blank" rel="noopener">render.com</a> → New Web Service → 连接你<strong>现有的 GitHub 仓库</strong> → Root Directory 填 <code>netease-api</code> → 部署后复制 <code>https://xxx.onrender.com</code></li>
-              <li><strong>一行命令</strong>：终端运行 <code>npx NeteaseCloudMusicApi@latest</code>，地址填 <code>http://127.0.0.1:3000</code></li>
-            </ol>
-          </div>
-          <div class="form-group">
-            <label for="musicApiInput">API 服务地址</label>
-            <input type="url" id="musicApiInput" placeholder="https://xxx.trycloudflare.com 或 http://127.0.0.1:3000" autocomplete="off">
-          </div>
-          <div class="input-row">
-            <button class="btn-primary" id="musicApiSave">保存地址</button>
-            <button class="btn-secondary" id="musicApiTest">测试连接</button>
-          </div>
-          <div class="form-group">
-            <label for="musicQualitySelect">播放音质</label>
-            <select id="musicQualitySelect" class="music-quality-select"></select>
-            <p class="music-hint">极高/无损/Hi-Res 需扫码登录且有相应 VIP；切换音质会重新加载当前歌曲</p>
-          </div>
-          <div class="form-group">
-            <label for="musicVolumePanel">音量</label>
-            <input type="range" id="musicVolumePanel" min="0" max="100" value="75">
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 头像设置面板 -->
-  <div class="modal" id="avatarPanel">
-    <div class="modal-box modal-box-sm">
-      <div class="modal-header">
-        <h3>👤 自定义头像</h3>
-        <button class="modal-close" id="avatarClose">×</button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-desc">头像会自动<strong>居中裁剪为圆形</strong>，并根据屏幕大小适配显示（约 32～36 像素），清晰且不突兀。</p>
-        <div class="avatar-preview-wrap">
-          <div class="avatar-preview-ring">
-            <span class="avatar-preview-fallback" id="avatarPreviewFallback">🛡️</span>
-            <img class="avatar-preview-img" id="avatarPreview" alt="头像预览" hidden>
-          </div>
-          <p class="avatar-preview-tip">点击左上角头像可快速打开此面板</p>
-        </div>
-        <p class="bg-status" id="avatarStatus">当前：默认图标 🛡️</p>
-        <div class="form-group">
-          <label>上传本地图片</label>
-          <input type="file" id="avatarFile" accept="image/*">
-        </div>
-        <div class="form-group">
-          <label>或输入图片网址</label>
-          <div class="input-row">
-            <input type="url" id="avatarUrlInput" placeholder="https://example.com/avatar.jpg">
-            <button class="btn-primary" id="avatarUrlApply">应用</button>
-          </div>
-        </div>
-        <button class="btn-reset" id="avatarReset">恢复默认头像</button>
-      </div>
-    </div>
-  </div>
 
   <script>
     window.SUBJECT_META = {
       storageKey: 'netsec-review',
       defaultBrandTitle: '网络安全总复习',
       defaultBrandSubtitle: '课程考核重点 · 详细解析',
-      defaultPageTitle: '2026 网络安全总复习 · 详细解析',
-      defaultAvatar: '🛡️'
+      defaultPageTitle: '2026 网络安全总复习 · 详细解析'
     };
   </script>
   <script src="netsec-data.js"></script>
   <script src="netsec-examples.js"></script>
   <script src="netsec-memos.js"></script>
   <script src="app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
   <script src="bg.js"></script>
   <script src="brand.js"></script>
-  <script src="music.js"></script>
-  <script src="avatar.js"></script>
 </body>
 </html>
